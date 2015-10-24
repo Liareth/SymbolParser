@@ -1,0 +1,3 @@
+Not really for public consumption yet!
+
+tl;dr: Parses output dumpFunctions.idc to produce C++ (and C# in the future) bindings. Will be a generic tool.
