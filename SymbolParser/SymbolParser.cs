@@ -104,8 +104,16 @@ namespace SymbolParser
                     }
                 }
 
-                matchingBrackets.Add(line.Substring(index, matchingIndex - index));
-                index = line.IndexOf('<', matchingIndex + 1);
+                if (matchingIndex > index)
+                {
+                    matchingBrackets.Add(line.Substring(index, matchingIndex - index));
+                    index = line.IndexOf('<', matchingIndex + 1);
+                }
+                else
+                {
+                    // There was no matching bracket -- probably because this is an operator.
+                    break;
+                }
             }
 
             return matchingBrackets;
@@ -170,6 +178,42 @@ namespace SymbolParser
                 line = line.Replace(" *", "*");
                 line = line.Replace(" &", "&");
                 line = line.Replace(")const", ") const");
+                line = line.Replace("std::", "");
+
+                // Some symbols come with enums. We need to strip them and just assume int.
+                int indexOfEnum = line.IndexOf("enum  ");
+
+                while (indexOfEnum != -1)
+                {
+                    int indexOfRightBracket = line.IndexOf(')');
+                    int indexOfComma = line.IndexOf(',', indexOfEnum);
+
+                    bool rightBracket = indexOfRightBracket != -1;
+                    bool comma = indexOfComma != -1;
+
+                    if (rightBracket && comma)
+                    {
+                        if (indexOfRightBracket > indexOfComma)
+                        {
+                            rightBracket = false;
+                        }
+                        else
+                        {
+                            comma = false;
+                        }
+                    }
+
+                    if (rightBracket)
+                    {
+                        line = line.Replace(line.Substring(indexOfEnum, indexOfRightBracket - indexOfEnum), "int");
+                    }
+                    else
+                    {
+                        line = line.Replace(line.Substring(indexOfEnum, indexOfComma - indexOfEnum), "int");
+                    }
+
+                    indexOfEnum = line.IndexOf("enum  ");
+                }
 
                 lock (cleanList)
                 {

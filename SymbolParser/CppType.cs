@@ -41,7 +41,8 @@ namespace SymbolParser
         UNSIGNED_LONG_LONG_INT,
         UNSIGNED_SHORT_INT,
         VOID,
-        WCHAR_T
+        WCHAR_T,
+        FUNCTION
     };
 
     public class CppType
@@ -63,21 +64,37 @@ namespace SymbolParser
 
         public CppType(string rawType)
         {
-            isPointer = getIsPointer(rawType);
-
-            if (isPointer)
+            // If there are brackets in the type, it's a function pointer, so let's set our stuff manually.
+            // This should be improved in the future to properly support function pointers.
+            if (rawType.Contains('(') || rawType.Contains(')'))
             {
-                pointerDepth = getPointerDepth(rawType);
+                baseType = BuiltInCppTypes.FUNCTION;
+                type = getType(baseType.Value);
+                isPointer = true;
+                isConst = false;
+                isConstPointer = false;
+                isReference = false;
+                pointerDepth = 1;
             }
+            else
+            {
 
-            isReference = getIsReference(rawType);
-            isConst = getIsConst(rawType);
-            isConstPointer = getIsConstPointer(rawType);
-            baseType = getBaseType(rawType);
+                isPointer = getIsPointer(rawType);
 
-            type = baseType.HasValue
-                       ? getType(baseType.Value)
-                       : getType(rawType);
+                if (isPointer)
+                {
+                    pointerDepth = getPointerDepth(rawType);
+                }
+
+                isReference = getIsReference(rawType);
+                isConst = getIsConst(rawType);
+                isConstPointer = getIsConstPointer(rawType);
+                baseType = getBaseType(rawType);
+
+                type = baseType.HasValue
+                           ? getType(baseType.Value)
+                           : getType(rawType);
+            }
 
             m_representation = toStringRepresentation();
         }
@@ -248,6 +265,8 @@ namespace SymbolParser
                     return "void";
                 case BuiltInCppTypes.WCHAR_T:
                     return "wchar_t";
+                case BuiltInCppTypes.FUNCTION:
+                    return "void";
             }
 
             Debug.Assert(false, "Could not construct a string representation for type {type}!");
