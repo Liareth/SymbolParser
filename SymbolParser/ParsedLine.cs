@@ -322,7 +322,7 @@ namespace SymbolParser
             // So we've stopped operating as a state machine at this point.
 
             string funcNameSearchString;
-            int namespaceIndex = components[currentIndex].IndexOf("::", StringComparison.Ordinal);
+            int namespaceIndex = components[currentIndex].LastIndexOf("::", StringComparison.Ordinal);
 
             if (namespaceIndex == -1)
             {
@@ -343,10 +343,15 @@ namespace SymbolParser
 
                     foreach (string element in elements)
                     {
-                        className = className.Replace(element, new CppType(SymbolParser.handleTemplatedName(element)).ToString());
+                        className = className.Replace(element, new CppType(element).ToString());
                     }
                 }
 
+                // Replace any spaces from the ToString representation with our delimiter again.
+                className = preprocessTemplate(className);
+
+                // Strip any additional namespaces.
+                className = className.Replace("::", "");
                 funcNameSearchString = components[currentIndex].Substring(namespaceIndex + 2,
                                                                           components[currentIndex].Length -
                                                                           namespaceIndex - 2);

@@ -179,7 +179,6 @@ namespace SymbolParser
                 line = line.Replace(" *", "*");
                 line = line.Replace(" &", "&");
                 line = line.Replace(")const", ") const");
-                line = line.Replace("std::", "");
                 line = CppType.convertArrayToPtr(line);
                 line = CppType.convertEnumToInt(line);
 

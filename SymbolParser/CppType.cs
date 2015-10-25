@@ -64,6 +64,9 @@ namespace SymbolParser
 
         public CppType(string rawType)
         {
+            // Strip out any namespaces.
+            rawType = rawType.Replace("::", "");
+
             // If there are brackets in the type, it's a function pointer, so let's set our stuff manually.
             // This should be improved in the future to properly support function pointers.
             if (rawType.Contains('(') || rawType.Contains(')'))
@@ -111,10 +114,11 @@ namespace SymbolParser
 
                 if (rightBracketIndex != -1)
                 {
-                    line = line.Replace(line.Substring(leftBracketIndex, rightBracketIndex - leftBracketIndex), "*");
+                    rightBracketIndex += 1; // +1 to include the right bracket
+                    line = line.Replace(line.Substring(leftBracketIndex, rightBracketIndex - leftBracketIndex), "*"); 
                 }
 
-                leftBracketIndex = line.IndexOf('[');
+                leftBracketIndex = line.IndexOf('[', rightBracketIndex);
             }
 
             return line;
