@@ -35,6 +35,7 @@ namespace SymbolParser
                                  .ThenBy(funcName => funcName.name).ToList();
 
             var duplicateFuncs = new List<ParsedFunction>();
+            var uselessFuncs = new List<ParsedFunction>();
 
             for (var i = 0; i < functions.Count - 1; ++i)
             {
@@ -45,6 +46,30 @@ namespace SymbolParser
 
                 if (thisFunction.name == nextFunction.name)
                 {
+                    if (thisFunction.parameters.Count == nextFunction.parameters.Count)
+                    {
+                        bool identical = true;
+
+                        for (int j = 0; j < thisFunction.parameters.Count; ++j)
+                        {
+                            CppType thisType = thisFunction.parameters[j];
+                            CppType nextType = nextFunction.parameters[j];
+
+                            if (thisType.baseType != nextType.baseType || thisType.ToString() != nextType.ToString())
+                            {
+                                identical = false;
+                                break;
+                            }
+                        }
+
+                        // These functions have the same name and the same signature. This isn't possible in C++.
+                        // We just need to completely discard one.
+                        if (identical)
+                        {
+                            uselessFuncs.Add(nextFunction);
+                        }
+                    }
+
                     if (duplicateFuncs.Count == 0)
                     {
                         duplicateFuncs.Add(thisFunction);
@@ -62,6 +87,11 @@ namespace SymbolParser
             }
 
             renameDuplicates(duplicateFuncs);
+
+            foreach (ParsedFunction function in uselessFuncs)
+            {
+                functions.Remove(function);
+            }
         }
 
         public List<string> asSource(string ns = null)
