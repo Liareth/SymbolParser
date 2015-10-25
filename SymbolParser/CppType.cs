@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 namespace SymbolParser
@@ -45,7 +46,6 @@ namespace SymbolParser
 
     public class CppType
     {
-        public const string UNKNOWN_TYPE = "unknown";
         private readonly string m_representation;
         public bool isPointer { get; private set; }
         public uint pointerDepth { get; private set; }
@@ -147,7 +147,7 @@ namespace SymbolParser
 
         private static string getType(BuiltInCppTypes type)
         {
-            string representation = UNKNOWN_TYPE;
+            string representation = null;
 
             switch (type)
             {
@@ -319,8 +319,13 @@ namespace SymbolParser
                     representation = "wchar_t";
                     break;
 
+                default:
+                    Debug.Assert(false, "No handler for type {type}!");
+                    break;
+
             }
 
+            Debug.Assert(representation != null, "Could not construct a string representation for type {type}!");
             return representation;
         }
 

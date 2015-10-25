@@ -191,10 +191,11 @@ namespace SymbolParser
                 line = line.Replace("struct ", "");
                 line = line.Replace(" *", "*");
                 line = line.Replace(" &", "&");
+                line = line.Replace(")const", ") const");
 
                 lock (cleanList)
                 {
-                    cleanList.Add(line.Replace(")const", ") const"));
+                    cleanList.Add(line);
                 }
             });
 
@@ -351,6 +352,8 @@ namespace SymbolParser
             source.Add("#include \"FunctionsLinux.hpp\"");
 #endif
 
+            header.Add("");
+            header.Add("#include <cstdint>");
             header.Add("");
             header.Add("namespace NWNXLib {");
             header.Add("");

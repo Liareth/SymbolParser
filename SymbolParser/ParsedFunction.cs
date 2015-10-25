@@ -135,7 +135,7 @@ namespace SymbolParser
         {
             return new List<string>
             {
-                String.Format("{0} = reinterpret_cast<void*>(0x{1:X8});",
+                String.Format("{0} = 0x{1:X8};",
                               standaloneSig(),
                               address)
             };
@@ -332,7 +332,7 @@ namespace SymbolParser
 
             if (isConstructor || isDestructor)
             {
-                return "";
+                return null;
             }
 
             return DEFAULT_RET_TYPE;
@@ -342,7 +342,7 @@ namespace SymbolParser
         {
             string retType = getCorrectReturnType();
 
-            if (String.IsNullOrWhiteSpace(retType))
+            if (retType == null)
             {
                 return DEFAULT_RET_TYPE;
             }
@@ -368,7 +368,7 @@ namespace SymbolParser
         {
             var sb = new StringBuilder();
 
-            sb.Append("void * const ");
+            sb.Append("uintptr_t ");
 
             if (parentClass != null)
             {
@@ -442,7 +442,13 @@ namespace SymbolParser
         private string baseSig()
         {
             string retType = getCorrectReturnType();
-            return (!String.IsNullOrWhiteSpace(retType) ? retType + " " : "") +
+
+            if (retType != null)
+            {
+                retType += " ";
+            }
+
+            return (retType ?? "") +
                    name + "(" + formattedParams() + ")" +
                    (isConst ? " const" : "");
         }
