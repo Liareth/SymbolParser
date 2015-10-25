@@ -165,13 +165,13 @@ namespace SymbolParser
                     classSigSource(),
                     "{",
                     "    __asm__ __volatile__",
-                    "    {",
+                    "    (",
                     "        \"leave;\"",
                     "        \"jmp *%0;\"",
                     "        : // No outputs",
                     "        : \"r\" (0x" + address + ")",
                     "        : // No clobbered registers",
-                    "    };",
+                    "    );",
                     "}"
                 };
             }
