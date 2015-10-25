@@ -60,6 +60,8 @@ namespace SymbolParser
                 crossReference(classes, crossRefClasses);
             }
 
+            handleDependencies(classes);
+
             dumpStandaloneFiles(classes);
             dumpClassFiles(classes);
         }
@@ -228,8 +230,13 @@ namespace SymbolParser
                 pair.Key.addFunctions(pair.Value);
             }
 
+            return parsedClasses;
+        }
+
+        private void handleDependencies(List<ParsedClass> classes)
+        {
             // Determine dependencies
-            foreach (ParsedClass theClass in parsedClassDict.Values)
+            foreach (ParsedClass theClass in classes)
             {
                 var dependencies = new List<CppType>();
 
@@ -245,7 +252,7 @@ namespace SymbolParser
 
                 // Sorting the list beforehand ensures we don't have to check for duplicates every time.
                 dependencies.Sort((first, second) => String.CompareOrdinal(first.type, second.type));
-                
+
                 var needConcreteDef = false;
 
                 for (var i = 0; i < dependencies.Count; ++i)
@@ -265,8 +272,7 @@ namespace SymbolParser
 
                     if (dependencies.Count <= i + 1 || dependency.type != dependencies[i + 1].type)
                     {
-                        ParsedClass dependencyClass;
-                        parsedClassDict.TryGetValue(handleTemplatedName(dependency.type), out dependencyClass);
+                        ParsedClass dependencyClass = classes.FirstOrDefault(param => param.name == dependency.type);
 
                         if (dependencyClass != null)
                         {
@@ -288,12 +294,9 @@ namespace SymbolParser
                         needConcreteDef = false;
                     }
 
-
                 }
             }
-
-            return parsedClasses;
-        }
+        }      
 
         private static void dumpStandaloneFiles(List<ParsedClass> classes)
         {
@@ -331,15 +334,15 @@ namespace SymbolParser
             header.Add("");
             header.Add("#include <cstdint>");
             header.Add("");
-            header.Add("namespace NWNXLib {");
+            header.Add("namespace " + ns1 + " {");
             header.Add("");
-            header.Add("namespace Functions {");
+            header.Add("namespace " + ns2 + " {");
             header.Add("");
 
             source.Add("");
-            source.Add("namespace NWNXLib {");
+            source.Add("namespace " + ns1 + " {");
             source.Add("");
-            source.Add("namespace Functions {");
+            source.Add("namespace " + ns2 + " {");
             source.Add("");
 
             foreach (ParsedClass theClass in classes)
@@ -414,7 +417,11 @@ namespace SymbolParser
                 headerFile.Add("#ifndef " + headerGuard);
                 headerFile.Add("#define " + headerGuard);
                 headerFile.Add("");
-                headerFile.Add(String.Format("typedef void* {0};", unknownType.type));
+                headerFile.Add("namespace " + CommandLine.args.libNamespace + " {");
+                headerFile.Add("");
+                headerFile.Add("class " + unknownType.type + " { };");
+                headerFile.Add("");
+                headerFile.Add("}");
                 headerFile.Add("");
                 headerFile.Add("#endif // " + headerGuard);
 
@@ -433,7 +440,33 @@ namespace SymbolParser
                 body.Add("");
             }
 
+            body.Add("namespace " + CommandLine.args.libNamespace + " {");
+            body.Add("");
+
+            if (CommandLine.args.target == CommandLineArgs.LINUX)
+            {
+                body.Add("// Disable optimizations for this file.");
+                body.Add("#pragma GCC push_options");
+                body.Add("#pragma GCC optimize (\"O0\")");
+                body.Add("");
+                body.Add("// Disable no return value warning for this file.");
+                body.Add("#pragma GCC diagnostic push");
+                body.Add("#pragma GCC diagnostic ignored \"-Wreturn-type\"");
+                body.Add("");
+            }
+
             body.AddRange(theClass.asClassSource());
+
+            if (CommandLine.args.target == CommandLineArgs.LINUX)
+            {
+                body.Add("#pragma GCC pop_options");
+                body.Add("");
+                body.Add("#pragma GCC diagnostic pop");
+                body.Add("");
+            }
+
+            body.Add("");
+            body.Add("}");
         }
 
         private static void buildClassHeader(List<string> header, ParsedClass theClass)
@@ -450,14 +483,19 @@ namespace SymbolParser
                 header.Add("");
             }
 
+            header.Add("namespace " + CommandLine.args.libNamespace + " {");
+            header.Add("");
+
             if (theClass.sourceDependencies.Count > 0)
             {
-                header.Add("// Forward class declarations (defined in the source file.).");
+                header.Add("// Forward class declarations (defined in the source file)");
                 header.AddRange(theClass.sourceDependencies.Select(dependency => String.Format("class {0};", dependency.name)));
                 header.Add("");
             }
 
             header.AddRange(theClass.asClassHeader());
+            header.Add("");
+            header.Add("}");
             header.Add("");
             header.Add("#endif // " + headerGuard);
         }
