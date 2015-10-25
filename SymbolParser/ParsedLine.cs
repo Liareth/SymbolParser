@@ -332,6 +332,21 @@ namespace SymbolParser
             else
             {
                 className = components[currentIndex].Substring(0, namespaceIndex);
+                List<string> templatedTypes = SymbolParser.getMatchingBrackets(className);
+
+                // Each individual element of the matching array should represent a templated type.
+                // Construct a type from the string, then extract the string representation from it.
+                // This allows us to handle special cases, e.g. function pointers.
+                for (int i = 0; i < templatedTypes.Count; ++i)
+                {
+                    string[] elements = templatedTypes[i].Split(',');
+
+                    foreach (string element in elements)
+                    {
+                        className = className.Replace(element, new CppType(SymbolParser.handleTemplatedName(element)).ToString());
+                    }
+                }
+
                 funcNameSearchString = components[currentIndex].Substring(namespaceIndex + 2,
                                                                           components[currentIndex].Length -
                                                                           namespaceIndex - 2);

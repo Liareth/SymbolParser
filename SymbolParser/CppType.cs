@@ -78,7 +78,6 @@ namespace SymbolParser
             }
             else
             {
-
                 isPointer = getIsPointer(rawType);
 
                 if (isPointer)
@@ -99,12 +98,75 @@ namespace SymbolParser
             m_representation = toStringRepresentation();
         }
 
+        // Converts an array to a pointer type:
+        // char[50] -> char*
+        // char[50][50] -> char**
+        public static string convertArrayToPtr(string line)
+        {
+            int leftBracketIndex = line.IndexOf('[');
+
+            while (leftBracketIndex != -1)
+            {
+                int rightBracketIndex = line.IndexOf(']', leftBracketIndex);
+
+                if (rightBracketIndex != -1)
+                {
+                    line = line.Replace(line.Substring(leftBracketIndex, rightBracketIndex - leftBracketIndex), "*");
+                }
+
+                leftBracketIndex = line.IndexOf('[');
+            }
+
+            return line;
+        }
+
+        public static string convertEnumToInt(string line)
+        {
+            // Some symbols come with enums. We need to strip them and just assume int.
+            int indexOfEnum = line.IndexOf("enum  ");
+
+            while (indexOfEnum != -1)
+            {
+                int indexOfRightBracket = line.IndexOf(')');
+                int indexOfComma = line.IndexOf(',', indexOfEnum);
+
+                bool rightBracket = indexOfRightBracket != -1;
+                bool comma = indexOfComma != -1;
+
+                if (rightBracket && comma)
+                {
+                    if (indexOfRightBracket > indexOfComma)
+                    {
+                        rightBracket = false;
+                    }
+                    else
+                    {
+                        comma = false;
+                    }
+                }
+
+                if (rightBracket)
+                {
+                    line = line.Replace(line.Substring(indexOfEnum, indexOfRightBracket - indexOfEnum), "int");
+                }
+                else
+                {
+                    line = line.Replace(line.Substring(indexOfEnum, indexOfComma - indexOfEnum), "int");
+                }
+
+                indexOfEnum = line.IndexOf("enum  ");
+            }
+
+            return line;
+        }
+
         private static string cleanType(string type)
         {
             type = type.Replace("*", "");
             type = type.Replace("&", "");
             type = type.Replace("const", "");
             type = type.Replace("^", " ");
+
             return type.Trim();
         }
 
