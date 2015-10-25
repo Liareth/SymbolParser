@@ -5,36 +5,15 @@ using System.Linq;
 using System.Threading.Tasks;
 
 // TASK LIST:
-// 1. Dehack. DEHACK! SymbolParser front-end is full of full paths. Let's rely on the command line.
-// 2. Remove all usages of the preprocessor.
-// 2. Improve platform dependant types (__int32). Add flag to indicate platform dependant, and don't apply these during cross referencing.
-// 4. Command line params: -parse "rawdumplinux.txt" -crossref "rawdumpwindows.txt" "rawdumpwindows2.txt" -namespaces "NWNXLib" -makeclasses  -makefunctions -classnamespaces "Classes" -functionnamespaces "Functions" -headerguardprefix "NWNX_UNIFIED__" -log "log.txt" -outputdir "output"
-// 5. Perhaps improve the implementation of unknown types.
+// 1. Improve platform dependant types (__int32). Add flag to indicate platform dependant, and don't apply these during cross referencing.
+// 2. Perhaps improve the implementation of unknown types.
 
 namespace SymbolParser
 {
     public class SymbolParser
     {
-        public const string IN_DIR = @"D:\Development\\NWNX2-Unified\Scripts";
-        public const string OUT_DIR = @"D:\Development\NWNX2-Unified\NWNXLib\Current\GameAPI";
         public const string OUT_CLASS_FOLDER_WINDOWS = @"ClassWrappers\Windows";
         public const string OUT_CLASS_FOLDER_LINUX = @"ClassWrappers\Linux";
-        public const string OUT_FUNCTION_FOLDER_WINDOWS = null;
-        public const string OUT_FUNCTION_FOLDER_LINUX = null;
-
-        public const string WINDOWS_RAW_FILE_NAME = "rawdumpwindows.txt";
-        public const string LINUX_RAW_FILE_NAME = "rawdumplinux.txt";
-
-        public const string WINDOWS_PARSED_FILE_NAME = "parsedwindows.txt";
-        public const string LINUX_PARSED_FILE_NAME = "parsedlinux.txt";
-
-#if PARSE_WIN32
-        public const string RAW_FILE_NAME = WINDOWS_RAW_FILE_NAME;
-        public const string PARSED_FILE_NAME = WINDOWS_PARSED_FILE_NAME;
-#else
-        public const string RAW_FILE_NAME = LINUX_RAW_FILE_NAME;
-        public const string PARSED_FILE_NAME = LINUX_PARSED_FILE_NAME;
-#endif
 
         public readonly string[] blackListedPatterns =
         {
@@ -72,17 +51,14 @@ namespace SymbolParser
 
         public SymbolParser()
         {
-            List<string> clean = cleanFile(RAW_FILE_NAME);
-            File.WriteAllLines(Path.Combine(IN_DIR, PARSED_FILE_NAME), clean);
+            List<string> clean = cleanFile(CommandLine.args.parse);
             List<ParsedClass> classes = getClasses(getParsedLines(clean));
 
-#if !PARSE_WIN32
-            // Since we don't have return types for the Linux build, we should
-            // cross reference function names with both the windows symbol files
-            // we have.
-            List<ParsedClass> winClasses = getClasses(getParsedLines(cleanFile(WINDOWS_RAW_FILE_NAME)));
-            crossReference(classes, winClasses);
-#endif
+            if (CommandLine.args.crossref != null)
+            {
+                List<ParsedClass> crossRefClasses = getClasses(getParsedLines(cleanFile(CommandLine.args.crossref)));
+                crossReference(classes, crossRefClasses);
+            }
 
             dumpStandaloneFiles(classes);
             dumpClassFiles(classes);
@@ -171,9 +147,9 @@ namespace SymbolParser
             }
         }
 
-        private List<string> cleanFile(string fileName)
+        private List<string> cleanFile(string path)
         {
-            return cleanRaw(File.ReadAllLines(Path.Combine(IN_DIR, fileName)).ToList());
+            return cleanRaw(File.ReadAllLines(path).ToList());
         }
 
         private List<string> cleanRaw(List<string> lines)
@@ -321,36 +297,36 @@ namespace SymbolParser
 
         private static void dumpStandaloneFiles(List<ParsedClass> classes)
         {
-            const string ns1 = "NWNXLib";
-            const string ns2 = "Functions";
+            string ns1 = CommandLine.args.libNamespace;
+            string ns2 = CommandLine.args.functionNamespace;
 
-#if PARSE_WIN32
-            string funcDir = OUT_FUNCTION_FOLDER_WINDOWS != null
-                                 ? Path.Combine(OUT_DIR, OUT_FUNCTION_FOLDER_WINDOWS)
-                                 : OUT_DIR;
-#else
-            string funcDir = OUT_FUNCTION_FOLDER_LINUX != null
-                                 ? Path.Combine(OUT_DIR, OUT_FUNCTION_FOLDER_LINUX)
-                                 : OUT_DIR;
-#endif
+            string funcDir = CommandLine.args.outDir;
 
             if (!Directory.Exists(funcDir))
             {
                 Directory.CreateDirectory(funcDir);
             }
 
+            string functionHeader = CommandLine.args.headerGuardPrefix;
+            string fileName;
+
+            if (CommandLine.args.target == CommandLineArgs.WINDOWS)
+            {
+                functionHeader += "FUNCTIONS_WINDOWS_HPP";
+                fileName = "FunctionsWindows";
+            }
+            else
+            {
+                functionHeader += "FUNCTIONS_LINUX_HPP";
+                fileName = "FunctionsLinux";
+            }
+
             var source = new List<string>();
             var header = new List<string>();
 
-#if PARSE_WIN32
-            header.Add("#ifndef NWNX_UNIFIED__FUNCTIONS_WINDOWS_HPP");
-            header.Add("#define NWNX_UNIFIED__FUNCTIONS_WINDOWS_HPP");
-            source.Add("#include \"FunctionsWindows.hpp\"");
-#else
-            header.Add("#ifndef NWNX_UNIFIED__FUNCTIONS_LINUX_HPP");
-            header.Add("#define NWNX_UNIFIED__FUNCTIONS_LINUX_HPP");
-            source.Add("#include \"FunctionsLinux.hpp\"");
-#endif
+            header.Add("#ifndef " + functionHeader);
+            header.Add("#define " + functionHeader);
+            source.Add("#include \"" + fileName + ".hpp\"");
 
             header.Add("");
             header.Add("#include <cstdint>");
@@ -385,32 +361,24 @@ namespace SymbolParser
             source.Add("}");
             source.Add("");
 
-#if PARSE_WIN32
-            header.Add("#endif // NWNX_UNIFIED__FUNCTIONS_WINDOWS_HPP");
-#else
-            header.Add("#endif // NWNX_UNIFIED__FUNCTIONS_LINUX_HPP");
-#endif
+            header.Add("#endif // " + functionHeader);
 
-#if PARSE_WIN32
-            File.WriteAllLines(Path.Combine(funcDir, "FunctionsWindows.cpp"), source);
-            File.WriteAllLines(Path.Combine(funcDir, "FunctionsWindows.hpp"), header);
-#else
-            File.WriteAllLines(Path.Combine(funcDir, "FunctionsLinux.cpp"), source);
-            File.WriteAllLines(Path.Combine(funcDir, "FunctionsLinux.hpp"), header);
-#endif
+            File.WriteAllLines(Path.Combine(funcDir, fileName + ".cpp"), source);
+            File.WriteAllLines(Path.Combine(funcDir, fileName + ".hpp"), header);
         }
 
         private void dumpClassFiles(List<ParsedClass> classes)
         {
-#if PARSE_WIN32
-            string classDir = OUT_CLASS_FOLDER_WINDOWS != null
-                                  ? Path.Combine(OUT_DIR, OUT_CLASS_FOLDER_WINDOWS)
-                                  : OUT_DIR;
-#else
-            string classDir = OUT_CLASS_FOLDER_LINUX != null
-                                  ? Path.Combine(OUT_DIR, OUT_CLASS_FOLDER_LINUX)
-                                  : OUT_DIR;
-#endif
+            string classDir = CommandLine.args.outDir;
+
+            if (CommandLine.args.target == CommandLineArgs.WINDOWS)
+            {
+                classDir = Path.Combine(classDir, OUT_CLASS_FOLDER_WINDOWS);
+            }
+            else
+            {
+                classDir = Path.Combine(classDir, OUT_CLASS_FOLDER_LINUX);
+            }
 
             if (!Directory.Exists(classDir))
             {
@@ -434,7 +402,6 @@ namespace SymbolParser
                 buildClassHeader(header, theClass);
                 buildClassSource(source, theClass);
 
-
                 File.WriteAllLines(Path.Combine(classDir, theClass.name + ".hpp"), header);
                 File.WriteAllLines(Path.Combine(classDir, theClass.name + ".cpp"), source);
             }
@@ -443,7 +410,7 @@ namespace SymbolParser
             {
                 var headerFile = new List<string>();
 
-                string headerGuard = "NWNX_UNIFIED__UNKNOWN_" + unknownType.type.ToUpper() + "_HPP";
+                string headerGuard = CommandLine.args.headerGuardPrefix + unknownType.type.ToUpper() + "_HPP";
                 headerFile.Add("#ifndef " + headerGuard);
                 headerFile.Add("#define " + headerGuard);
                 headerFile.Add("");
@@ -471,7 +438,7 @@ namespace SymbolParser
 
         private static void buildClassHeader(List<string> header, ParsedClass theClass)
         {
-            string headerGuard = "NWNX_UNIFIED__" + theClass.name.ToUpper() + "_HPP";
+            string headerGuard = CommandLine.args.headerGuardPrefix + theClass.name.ToUpper() + "_HPP";
             header.Add("#ifndef " + headerGuard);
             header.Add("#define " + headerGuard);
             header.Add("");

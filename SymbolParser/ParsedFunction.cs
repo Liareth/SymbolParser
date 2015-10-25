@@ -143,35 +143,38 @@ namespace SymbolParser
 
         public List<String> asClassDefinition()
         {
-#if PARSE_WIN32
-            return new List<String>
+            if (CommandLine.args.target == CommandLineArgs.WINDOWS)
             {
-                classSigSource(),
-                "{",
-                "    _asm",
-                "    {",
-                "        leave;",
-                "        mov eax, 0x" + address + ";",
-                "        jmp eax;",
-                "    };",
-                "}"
-            };
-#else
-            return new List<String>
+                return new List<String>
+                {
+                    classSigSource(),
+                    "{",
+                    "    _asm",
+                    "    {",
+                    "        leave;",
+                    "        mov eax, 0x" + address + ";",
+                    "        jmp eax;",
+                    "    };",
+                    "}"
+                };
+            }
+            else
             {
-                classSigSource(),
-                "{",
-                "    __asm__ __volatile__",
-                "    {",
-                "        \"leave;\"",
-                "        \"jmp *%0;\"",
-                "        : // No outputs",
-                "        : \"r\" (0x" + address + ")",
-                "        : // No clobbered registers",
-                "    };",
-                "}"          
-            };
-#endif
+                return new List<String>
+                {
+                    classSigSource(),
+                    "{",
+                    "    __asm__ __volatile__",
+                    "    {",
+                    "        \"leave;\"",
+                    "        \"jmp *%0;\"",
+                    "        : // No outputs",
+                    "        : \"r\" (0x" + address + ")",
+                    "        : // No clobbered registers",
+                    "    };",
+                    "}"
+                };
+            }
         }
 
         public static FuncAccessLevel? stringToAccessLevel(string accessLevel)
@@ -208,36 +211,42 @@ namespace SymbolParser
 
         public static string callingConvToString(FuncCallingConvention? convention)
         {
-            switch (convention)
+            if (CommandLine.args.target == CommandLineArgs.WINDOWS)
             {
-                case FuncCallingConvention.CDECL:
-#if PARSE_WIN32
-                    return "__cdecl";
-#else
-                    return "__attribute__((cdecl))";
-#endif
-                case FuncCallingConvention.THISCALL:
-#if PARSE_WIN32
-                    return "__thiscall";
-#else
-                    return "__attribute__((thiscall))";
-#endif
-                case FuncCallingConvention.FASTCALL:
-#if PARSE_WIN32
-                    return "__fastcall";
-#else
-                    return "__attribute__((fastcall))";
-#endif
+                switch (convention)
+                {
+                    case FuncCallingConvention.CDECL:
+                        return "__cdecl";
 
-                case FuncCallingConvention.STDCALL:
-#if PARSE_WIN32
-                    return "__stdcall";
-#else
-                    return "__attribute__((stdcall))";
-#endif
-                default:
-                    return null;
+                    case FuncCallingConvention.THISCALL:
+                        return "__thiscall";
+
+                    case FuncCallingConvention.FASTCALL:
+                        return "__fastcall";
+
+                    case FuncCallingConvention.STDCALL:
+                        return "__stdcall";
+                }
             }
+            else
+            {
+                switch (convention)
+                {
+                    case FuncCallingConvention.CDECL:
+                        return "__attribute__((cdecl))";
+
+                    case FuncCallingConvention.THISCALL:
+                        return "__attribute__((thiscall))";
+
+                    case FuncCallingConvention.FASTCALL:
+                        return "__attribute__((fastcall))";
+
+                    case FuncCallingConvention.STDCALL:
+                        return "__attribute__((stdcall))";
+                }
+            }
+
+            return null;
         }
 
         private string makeFriendlyName()
@@ -396,27 +405,30 @@ namespace SymbolParser
 
             string sig = baseSig();
 
-#if PARSE_WIN32
-            if (callingConvention.HasValue)
+            if (CommandLine.args.target == CommandLineArgs.WINDOWS)
             {
-                int funcIndex = sig.IndexOf(name, StringComparison.Ordinal);
-
-                if (funcIndex != -1)
+                if (callingConvention.HasValue)
                 {
-                    sig = sig.Substring(0, funcIndex) + callingConvToString(callingConvention) + " " +
-                          sig.Substring(funcIndex, sig.Length - funcIndex);
+                    int funcIndex = sig.IndexOf(name, StringComparison.Ordinal);
+
+                    if (funcIndex != -1)
+                    {
+                        sig = sig.Substring(0, funcIndex) + callingConvToString(callingConvention) + " " +
+                              sig.Substring(funcIndex, sig.Length - funcIndex);
+                    }
                 }
             }
-#endif
 
             sb.Append(sig);
 
-#if !PARSE_WIN32
-            if (callingConvention.HasValue)
+            if (CommandLine.args.target == CommandLineArgs.LINUX)
             {
-                sb.Append(" " + ParsedFunction.callingConvToString(callingConvention));
+                if (callingConvention.HasValue)
+                {
+                    sb.Append(" " + ParsedFunction.callingConvToString(callingConvention));
+                }
             }
-#endif
+
             return sb.ToString();
         }
 

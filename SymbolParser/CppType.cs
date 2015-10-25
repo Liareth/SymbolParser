@@ -147,186 +147,111 @@ namespace SymbolParser
 
         private static string getType(BuiltInCppTypes type)
         {
-            string representation = null;
+            if (CommandLine.args.target == CommandLineArgs.WINDOWS)
+            {
+                switch (type)
+                {
+                    case BuiltInCppTypes.INT8:
+                        return "__int8";
+                    case BuiltInCppTypes.UNSIGNED_INT8:
+                        return "unsigned __int8";
+                    case BuiltInCppTypes.SIGNED_INT8:
+                        return "signed __int8";
+                    case BuiltInCppTypes.INT16:
+                        return "__int16";
+                    case BuiltInCppTypes.UNSIGNED_INT16:
+                        return "unsigned __int16";
+                    case BuiltInCppTypes.SIGNED_INT16:
+                        return "signed __int16";
+                    case BuiltInCppTypes.INT32:
+                        return "__int32";
+                    case BuiltInCppTypes.UNSIGNED_INT32:
+                        return "unsigned __int32";
+                    case BuiltInCppTypes.SIGNED_INT32:
+                        return "signed __int32";
+                    case BuiltInCppTypes.INT64:
+                        return "__int64";
+                    case BuiltInCppTypes.UNSIGNED_INT64:
+                        return "unsigned __int64";
+                    case BuiltInCppTypes.SIGNED_INT64:
+                        return "signed __int64";
+                }
+            }
+            else
+            {
+                switch (type)
+                {
+                    case BuiltInCppTypes.INT8:
+                    case BuiltInCppTypes.SIGNED_INT8:
+                        return "int8_t";
+                    case BuiltInCppTypes.UNSIGNED_INT8:
+                        return "uint8_t";
+                    case BuiltInCppTypes.INT16:
+                    case BuiltInCppTypes.SIGNED_INT16:
+                        return "int16_t";
+                    case BuiltInCppTypes.UNSIGNED_INT16:
+                        return "uint16_t";
+                    case BuiltInCppTypes.INT32:
+                    case BuiltInCppTypes.SIGNED_INT32:
+                        return "int32_t";
+                    case BuiltInCppTypes.UNSIGNED_INT32:
+                        return "uint32_t";
+                    case BuiltInCppTypes.INT64:
+                    case BuiltInCppTypes.SIGNED_INT64:
+                        return "int64_t";
+                    case BuiltInCppTypes.UNSIGNED_INT64:
+                        return "uint64_t";
+                }
+            }
 
             switch (type)
             {
-                case BuiltInCppTypes.INT8:
-#if PARSE_WIN32
-                    representation = "__int8";
-#else
-#endif
-                    break;
-
-                case BuiltInCppTypes.UNSIGNED_INT8:
-#if PARSE_WIN32
-                    representation = "unsigned __int8";
-#else
-#endif
-                    break;
-
-                case BuiltInCppTypes.SIGNED_INT8:
-#if PARSE_WIN32
-                    representation = "signed __int8";
-#else
-#endif
-                    break;
-
-                case BuiltInCppTypes.INT16:
-#if PARSE_WIN32
-                    representation = "__int16";
-#else
-#endif
-                    break;
-
-                case BuiltInCppTypes.UNSIGNED_INT16:
-#if PARSE_WIN32
-                    representation = "unsigned __int16";
-#else
-#endif
-                    break;
-
-                case BuiltInCppTypes.SIGNED_INT16:
-#if PARSE_WIN32
-                    representation = "signed __int16";
-#else
-#endif
-                    break;
-
-                case BuiltInCppTypes.INT32:
-#if PARSE_WIN32
-                    representation = "__int32";
-#else
-#endif
-                    break;
-
-                case BuiltInCppTypes.UNSIGNED_INT32:
-#if PARSE_WIN32
-                    representation = "unsigned __int32";
-#else
-#endif
-                    break;
-
-                case BuiltInCppTypes.SIGNED_INT32:
-#if PARSE_WIN32
-                    representation = "signed __int32";
-#else
-#endif
-                    break;
-
-                case BuiltInCppTypes.INT64:
-#if PARSE_WIN32
-                    representation = "__int64";
-#else
-#endif
-                    break;
-
-                case BuiltInCppTypes.UNSIGNED_INT64:
-#if PARSE_WIN32
-                    representation = "unsigned __int64";
-#else
-#endif
-                    break;
-
-                case BuiltInCppTypes.SIGNED_INT64:
-#if PARSE_WIN32
-                    representation = "signed __int64";
-#else
-#endif
-                    break;
-
                 case BuiltInCppTypes.BOOL:
-                    representation = "bool";
-                    break;
-
+                    return "bool";
                 case BuiltInCppTypes.CHAR:
-                    representation = "char";
-                    break;
-
+                    return "char";
                 case BuiltInCppTypes.DOUBLE:
-                    representation = "double";
-                    break;
-
+                    return "double";
                 case BuiltInCppTypes.FLOAT:
-                    representation = "float";
-                    break;
-
+                    return "float";
                 case BuiltInCppTypes.INT:
-                    representation = "int";
-                    break;
-
+                    return "int";
                 case BuiltInCppTypes.LONG_DOUBLE:
-                    representation = "long double";
-                    break;
-
+                    return "long double";
                 case BuiltInCppTypes.LONG_INT:
-                    representation = "long int";
-                    break;
-
+                    return "long int";
                 case BuiltInCppTypes.LONG_LONG_INT:
-                    representation = "long long";
-                    break;
-
+                    return "long long";
                 case BuiltInCppTypes.SHORT_INT:
-                    representation = "short int";
-                    break;
-
+                    return "short int";
                 case BuiltInCppTypes.SIGNED_CHAR:
-                    representation = "signed char";
-                    break;
-
+                    return "signed char";
                 case BuiltInCppTypes.SIGNED_INT:
-                    representation = "signed int";
-                    break;
-
+                    return "signed int";
                 case BuiltInCppTypes.SIGNED_LONG_INT:
-                    representation = "signed long int";
-                    break;
-
+                    return "signed long int";
                 case BuiltInCppTypes.SIGNED_LONG_LONG_INT:
-                    representation = "signed long long int";
-                    break;
-
+                    return "signed long long int";
                 case BuiltInCppTypes.SIGNED_SHORT_INT:
-                    representation = "signed short int";
-                    break;
-
+                    return "signed short int";
                 case BuiltInCppTypes.UNSIGNED_CHAR:
-                    representation = "unsigned char";
-                    break;
-
+                    return "unsigned char";
                 case BuiltInCppTypes.UNSIGNED_INT:
-                    representation = "unsigned int";
-                    break;
-
+                    return "unsigned int";
                 case BuiltInCppTypes.UNSIGNED_LONG_INT:
-                    representation = "unsigned long int";
-                    break;
-
+                    return "unsigned long int";
                 case BuiltInCppTypes.UNSIGNED_LONG_LONG_INT:
-                    representation = "unsigned long long int";
-                    break;
-
+                    return "unsigned long long int";
                 case BuiltInCppTypes.UNSIGNED_SHORT_INT:
-                    representation = "unsigned short int";
-                    break;
-
+                    return "unsigned short int";
                 case BuiltInCppTypes.VOID:
-                    representation = "void";
-                    break;
-
+                    return "void";
                 case BuiltInCppTypes.WCHAR_T:
-                    representation = "wchar_t";
-                    break;
-
-                default:
-                    Debug.Assert(false, "No handler for type {type}!");
-                    break;
-
+                    return "wchar_t";
             }
 
-            Debug.Assert(representation != null, "Could not construct a string representation for type {type}!");
-            return representation;
+            Debug.Assert(false, "Could not construct a string representation for type {type}!");
+            return null;
         }
 
         private static BuiltInCppTypes? getBaseType(string type)
@@ -334,59 +259,69 @@ namespace SymbolParser
             // Strip everything that might mess with this.
             type = cleanType(type);
 
+            if (CommandLine.args.target == CommandLineArgs.WINDOWS)
+            {
+                switch (type)
+                {
+                    case "__int8":
+                        return BuiltInCppTypes.INT8;
+                    case "unsigned __int8":
+                    case "unsigned^__int8":
+                        return BuiltInCppTypes.UNSIGNED_INT8;
+                    case "signed __int8":
+                    case "signed^__int8":
+                        return BuiltInCppTypes.SIGNED_INT8;
+                    case "__int16":
+                        return BuiltInCppTypes.INT16;
+                    case "unsigned __int16":
+                    case "unsigned^__int16":
+                        return BuiltInCppTypes.UNSIGNED_INT16;
+                    case "signed __int16":
+                    case "signed^__int16":
+                        return BuiltInCppTypes.SIGNED_INT16;
+                    case "__int32":
+                        return BuiltInCppTypes.INT32;
+                    case "unsigned __int32":
+                    case "unsigned^__int32":
+                        return BuiltInCppTypes.UNSIGNED_INT32;
+                    case "signed __int32":
+                    case "signed^__int32":
+                        return BuiltInCppTypes.SIGNED_INT32;
+                    case "__int64":
+                        return BuiltInCppTypes.INT64;
+                    case "unsigned __int64":
+                    case "unsigned^__int64":
+                        return BuiltInCppTypes.UNSIGNED_INT64;
+                    case "signed __int64":
+                    case "signed^__int64":
+                        return BuiltInCppTypes.SIGNED_INT64;
+                }
+            }
+            else
+            {
+                switch (type)
+                {
+                    case "int8_t":
+                        return BuiltInCppTypes.INT8;
+                    case "uint8_t":
+                        return BuiltInCppTypes.UNSIGNED_INT8;
+                    case "int16_t":
+                        return BuiltInCppTypes.INT16;
+                    case "uint16_t":
+                        return BuiltInCppTypes.UNSIGNED_INT16;
+                    case "int32_t":
+                        return BuiltInCppTypes.INT32;
+                    case "uint32_t":
+                        return BuiltInCppTypes.UNSIGNED_INT32;
+                    case "int64_t":
+                        return BuiltInCppTypes.INT64;
+                    case "uint64_t":
+                        return BuiltInCppTypes.UNSIGNED_INT64;
+                }
+            }
+
             switch (type)
             {
-#if PARSE_WIN32
-                case "__int8":
-                    return BuiltInCppTypes.INT8;
-                case "unsigned __int8":
-                case "unsigned^__int8":
-                    return BuiltInCppTypes.UNSIGNED_INT8;
-                case "signed __int8":
-                case "signed^__int8":
-                    return BuiltInCppTypes.SIGNED_INT8;
-                case "__int16":
-                    return BuiltInCppTypes.INT16;
-                case "unsigned __int16":
-                case "unsigned^__int16":
-                    return BuiltInCppTypes.UNSIGNED_INT16;
-                case "signed __int16":
-                case "signed^__int16":
-                    return BuiltInCppTypes.SIGNED_INT16;
-                case "__int32":
-                    return BuiltInCppTypes.INT32;
-                case "unsigned __int32":
-                case "unsigned^__int32":
-                    return BuiltInCppTypes.UNSIGNED_INT32;
-                case "signed __int32":
-                case "signed^__int32":
-                    return BuiltInCppTypes.SIGNED_INT32;
-                case "__int64":
-                    return BuiltInCppTypes.INT64;
-                case "unsigned __int64":
-                case "unsigned^__int64":
-                    return BuiltInCppTypes.UNSIGNED_INT64;
-                case "signed __int64":
-                case "signed^__int64":
-                    return BuiltInCppTypes.SIGNED_INT64;
-#else
-                case "int8_t":
-                    return BuiltInCppTypes.INT8;
-                case "uint8_t":
-                    return BuiltInCppTypes.UNSIGNED_INT8;
-                case "int16_t":
-                    return BuiltInCppTypes.INT16;
-                case "uint16_t":
-                    return BuiltInCppTypes.UNSIGNED_INT16;
-                case "int32_t":
-                    return BuiltInCppTypes.INT32;
-                case "uint32_t":
-                    return BuiltInCppTypes.UNSIGNED_INT32;
-                case "int64_t":
-                    return BuiltInCppTypes.INT64;
-                case "uint64_t":
-                    return BuiltInCppTypes.UNSIGNED_INT64;
-#endif
                 case "bool":
                     return BuiltInCppTypes.BOOL;
                 case "char":

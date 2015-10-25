@@ -8,6 +8,7 @@ namespace SymbolParser
         {
             try
             {
+                CommandLine.parseArgs(args);
                 var parser = new SymbolParser();
             }
             catch (Exception ex)
