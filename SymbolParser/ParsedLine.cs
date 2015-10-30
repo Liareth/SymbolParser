@@ -341,14 +341,7 @@ namespace SymbolParser
                 {
                     string[] elements = templatedTypes[i].Split(',');
 
-                    foreach (string element in elements)
-                    {
-                        className = className.Replace(element, new CppType(element).ToString());
-                    }
                 }
-
-                // Replace any spaces from the ToString representation with our delimiter again.
-                className = preprocessTemplate(className);
 
                 // Strip any additional namespaces.
                 className = className.Replace("::", "");
