@@ -135,9 +135,9 @@ namespace SymbolParser
         {
             return new List<string>
             {
-                String.Format("{0} = 0x{1:X8};",
+                String.Format("{0} = {1};",
                               standaloneSig(),
-                              address)
+                              addressAsString())
             };
         }
 
@@ -152,7 +152,7 @@ namespace SymbolParser
                     "    _asm",
                     "    {",
                     "        leave;",
-                    "        mov eax, 0x" + address + ";",
+                    "        mov eax, 0x" + addressAsString() + ";",
                     "        jmp eax;",
                     "    };",
                     "}"
@@ -169,7 +169,7 @@ namespace SymbolParser
                     "        \"leave;\"",
                     "        \"jmp *%0;\"",
                     "        : // No outputs",
-                    "        : \"r\" (0x" + address + ")",
+                    "        : \"r\" (0x" + addressAsString() + ")",
                     "        : // No clobbered registers",
                     "    );",
                     "}"
@@ -247,6 +247,11 @@ namespace SymbolParser
             }
 
             return null;
+        }
+
+        private string addressAsString()
+        {
+            return String.Format("0x{0:X8}", address);
         }
 
         private string makeFriendlyName()
