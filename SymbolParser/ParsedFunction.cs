@@ -152,7 +152,7 @@ namespace SymbolParser
                     "    _asm",
                     "    {",
                     "        leave;",
-                    "        mov eax, 0x" + addressAsString() + ";",
+                    "        mov eax, " + addressAsString() + ";",
                     "        jmp eax;",
                     "    };",
                     "}"
@@ -169,7 +169,7 @@ namespace SymbolParser
                     "        \"leave;\"",
                     "        \"jmp *%0;\"",
                     "        : // No outputs",
-                    "        : \"r\" (0x" + addressAsString() + ")",
+                    "        : \"r\" (" + addressAsString() + ")",
                     "        : // No clobbered registers",
                     "    );",
                     "}"
