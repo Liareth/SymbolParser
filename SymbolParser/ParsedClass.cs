@@ -94,18 +94,6 @@ namespace SymbolParser
             }
         }
 
-        public List<string> asSource(string ns = null)
-        {
-            var lines = new List<string>();
-
-            foreach (ParsedFunction function in functions)
-            {
-                lines.AddRange(function.asDefinition());
-            }
-
-            return lines;
-        }
-
         public List<string> asClassSource()
         {
             var lines = new List<string>();

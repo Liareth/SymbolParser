@@ -14,6 +14,7 @@ namespace SymbolParser
     {
         public const string OUT_CLASS_FOLDER_WINDOWS = @"ClassWrappers\Windows";
         public const string OUT_CLASS_FOLDER_LINUX = @"ClassWrappers\Linux";
+        public const string OUT_FUNCTION_FOLDER = @"Functions";
 
         public readonly string[] blackListedPatterns =
         {
@@ -314,7 +315,7 @@ namespace SymbolParser
             string ns1 = CommandLine.args.libNamespace;
             string ns2 = CommandLine.args.functionNamespace;
 
-            string funcDir = CommandLine.args.outDir;
+            string funcDir = Path.Combine(CommandLine.args.outDir, OUT_FUNCTION_FOLDER);
 
             if (!Directory.Exists(funcDir))
             {
@@ -335,12 +336,10 @@ namespace SymbolParser
                 fileName = "FunctionsLinux";
             }
 
-            var source = new List<string>();
             var header = new List<string>();
 
             header.Add("#ifndef " + functionHeader);
             header.Add("#define " + functionHeader);
-            source.Add("#include \"" + fileName + ".hpp\"");
 
             header.Add("");
             header.Add("#include <cstdint>");
@@ -350,34 +349,18 @@ namespace SymbolParser
             header.Add("namespace " + ns2 + " {");
             header.Add("");
 
-            source.Add("");
-            source.Add("namespace " + ns1 + " {");
-            source.Add("");
-            source.Add("namespace " + ns2 + " {");
-            source.Add("");
-
             foreach (ParsedClass theClass in classes)
             {
                 header.AddRange(theClass.asHeader());
                 header.Add("");
-
-                source.AddRange(theClass.asSource(ns1 + "::" + ns2));
-                source.Add("");
             }
 
             header.Add("}");
             header.Add("");
             header.Add("}");
             header.Add("");
-
-            source.Add("}");
-            source.Add("");
-            source.Add("}");
-            source.Add("");
-
             header.Add("#endif // " + functionHeader);
 
-            File.WriteAllLines(Path.Combine(funcDir, fileName + ".cpp"), source);
             File.WriteAllLines(Path.Combine(funcDir, fileName + ".hpp"), header);
         }
 

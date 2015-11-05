@@ -119,7 +119,7 @@ namespace SymbolParser
             return new List<String>
             {
                 "// " + ToString(),
-                "extern " + standaloneSig() + ";"
+                String.Format("{0} = {1};", standaloneSig(), addressAsString())
             };
         }
 
@@ -128,16 +128,6 @@ namespace SymbolParser
             return new List<String>
             {
                 classSigHeader() + ";"
-            };
-        }
-
-        public List<String> asDefinition()
-        {
-            return new List<string>
-            {
-                String.Format("{0} = {1};",
-                              standaloneSig(),
-                              addressAsString())
             };
         }
 
@@ -382,7 +372,7 @@ namespace SymbolParser
         {
             var sb = new StringBuilder();
 
-            sb.Append("uintptr_t ");
+            sb.Append("constexpr uintptr_t ");
 
             if (parentClass != null)
             {
