@@ -166,35 +166,33 @@ namespace SymbolParser
         // Provides processing on the provided file to make our life easier.
         private List<string> cleanRaw(List<string> lines)
         {
-            var cleanList = new List<string>();
+            List<string> cleanList = new List<string>();
 
-            Parallel.ForEach(lines, line =>
+            foreach(string line in lines)
             {
-                if (line[0] == '_' || blackListedPatterns.Any(line.Contains))
+                string modifiedLine = line;
+
+                if (modifiedLine[0] == '_' || blackListedPatterns.Any(modifiedLine.Contains))
                 {
-                    return;
+                    continue;
                 }
 
-                line = line.Replace("class ", "");
-                line = line.Replace("struct ", "");
-                line = line.Replace(" *", "*");
-                line = line.Replace(" &", "&");
-                line = line.Replace(")const", ") const");
-                line = CppType.convertArrayToPtr(line);
-                line = CppType.convertEnumToInt(line);
-
-                lock (cleanList)
-                {
-                    cleanList.Add(line);
-                }
-            });
+                modifiedLine = modifiedLine.Replace("class ", "");
+                modifiedLine = modifiedLine.Replace("struct ", "");
+                modifiedLine = modifiedLine.Replace(" *", "*");
+                modifiedLine = modifiedLine.Replace(" &", "&");
+                modifiedLine = modifiedLine.Replace(")const", ") const");
+                modifiedLine = CppType.convertArrayToPtr(modifiedLine);
+                modifiedLine = CppType.convertEnumToInt(modifiedLine);
+                cleanList.Add(modifiedLine);
+            }
 
             return cleanList;
         }
 
         private List<ParsedLine> getParsedLines(List<string> lines)
         {
-            return lines.AsParallel().Select(line => new ParsedLine(line)).Where(parsedLine => parsedLine.functionName != null).ToList();
+            return lines.AsParallel().AsOrdered().Select(line => new ParsedLine(line)).Where(parsedLine => parsedLine.functionName != null).ToList();
         }
 
         private List<ParsedClass> getClasses(List<ParsedLine> parsedLines)
@@ -462,7 +460,6 @@ namespace SymbolParser
                 body.Add("");
             }
 
-            body.Add("");
             body.Add("}");
             body.Add("");
             body.Add("}");
