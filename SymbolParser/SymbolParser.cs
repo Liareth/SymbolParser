@@ -312,9 +312,6 @@ namespace SymbolParser
 
         private static void dumpStandaloneFiles(List<ParsedClass> classes)
         {
-            string ns1 = CommandLine.args.libNamespace;
-            string ns2 = CommandLine.args.functionNamespace;
-
             string funcDir = Path.Combine(CommandLine.args.outDir, OUT_FUNCTION_FOLDER);
 
             if (!Directory.Exists(funcDir))
@@ -344,9 +341,9 @@ namespace SymbolParser
             header.Add("");
             header.Add("#include <cstdint>");
             header.Add("");
-            header.Add("namespace " + ns1 + " {");
+            header.Add("namespace " + CommandLine.args.libNamespace + " {");
             header.Add("");
-            header.Add("namespace " + ns2 + " {");
+            header.Add("namespace " + CommandLine.args.functionNamespace + " {");
             header.Add("");
 
             foreach (ParsedClass theClass in classes)
@@ -413,7 +410,11 @@ namespace SymbolParser
                 headerFile.Add("");
                 headerFile.Add("namespace " + CommandLine.args.libNamespace + " {");
                 headerFile.Add("");
+                headerFile.Add("namespace " + CommandLine.args.classNamespace + " {");
+                headerFile.Add("");
                 headerFile.Add("class " + unknownType.type + " { };");
+                headerFile.Add("");
+                headerFile.Add("}");
                 headerFile.Add("");
                 headerFile.Add("}");
                 headerFile.Add("");
@@ -435,6 +436,8 @@ namespace SymbolParser
             }
 
             body.Add("namespace " + CommandLine.args.libNamespace + " {");
+            body.Add("");
+            body.Add("namespace " + CommandLine.args.classNamespace + " {");
             body.Add("");
 
             if (CommandLine.args.target == CommandLineArgs.LINUX)
@@ -459,6 +462,8 @@ namespace SymbolParser
                 body.Add("");
             }
 
+            body.Add("");
+            body.Add("}");
             body.Add("");
             body.Add("}");
         }

@@ -13,6 +13,7 @@ namespace SymbolParser
         public string crossref;
         public string libNamespace = "NWNXLib";
         public string functionNamespace = "Functions";
+        public string classNamespace = "API";
         public string headerGuardPrefix = "NWNX_UNIFIED__";
         public string outDir;
         public string target = LINUX;
