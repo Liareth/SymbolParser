@@ -61,42 +61,25 @@ namespace SymbolParser
 
         public string type { get; private set; }
         public BuiltInCppTypes? baseType { get; private set; }
+        public uint sizeInBytes { get; private set; }
 
         public CppType(string rawType)
         {
-            // Strip out any namespaces.
-            rawType = rawType.Replace("::", "");
+            isPointer = getIsPointer(rawType);
 
-            // If there are brackets in the type, it's a function pointer, so let's set our stuff manually.
-            // This should be improved in the future to properly support function pointers.
-            if (rawType.Contains('(') || rawType.Contains(')'))
+            if (isPointer)
             {
-                baseType = BuiltInCppTypes.FUNCTION;
-                type = getType(baseType.Value);
-                isPointer = true;
-                isConst = false;
-                isConstPointer = false;
-                isReference = false;
-                pointerDepth = 1;
+                pointerDepth = getPointerDepth(rawType);
             }
-            else
-            {
-                isPointer = getIsPointer(rawType);
 
-                if (isPointer)
-                {
-                    pointerDepth = getPointerDepth(rawType);
-                }
+            isReference = getIsReference(rawType);
+            isConst = getIsConst(rawType);
+            isConstPointer = getIsConstPointer(rawType);
+            baseType = getBaseType(rawType);
 
-                isReference = getIsReference(rawType);
-                isConst = getIsConst(rawType);
-                isConstPointer = getIsConstPointer(rawType);
-                baseType = getBaseType(rawType);
-
-                type = baseType.HasValue
-                           ? getType(baseType.Value)
-                           : getType(rawType);
-            }
+            type = baseType.HasValue
+                        ? getType(baseType.Value)
+                        : getType(rawType);
 
             m_representation = toStringRepresentation();
         }
