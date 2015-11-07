@@ -35,8 +35,9 @@ namespace SymbolParser
             functions.AddRange(newFunctions);
 
             // Sort the functions, so we only need to compare with the next one.
-            // Constructors -- destructors -- alphabetical func names.
-            functions = functions.OrderByDescending(ctor => ctor.isConstructor)
+            // Generated functions -- Constructors -- destructors -- alphabetical func names.
+            functions = functions.OrderByDescending(gen => gen.isGenerated)
+                                 .ThenByDescending(ctor => ctor.isConstructor)
                                  .ThenByDescending(dtor => dtor.isDestructor)
                                  .ThenBy(funcName => funcName.name).ToList();
 
