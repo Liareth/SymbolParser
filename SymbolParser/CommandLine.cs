@@ -20,6 +20,7 @@ namespace SymbolParser
         public string target = LINUX;
         public bool makeFunctions = true;
         public bool makeClasses = true;
+        public bool useClassProtection = false;
     }
 
     public class CommandLine

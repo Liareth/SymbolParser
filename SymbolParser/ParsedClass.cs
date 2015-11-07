@@ -141,13 +141,26 @@ namespace SymbolParser
             lines.Add("class " + name);
             lines.Add("{");
             lines.Add("public:");
-            lines.AddRange(from theFunc
-                               in
-                               functions.Where(
-                                   func => !func.accessLevel.HasValue || func.accessLevel == FuncAccessLevel.PUBLIC)
-                           from line
-                               in theFunc.asClassDeclaration()
-                           select "    " + line);
+
+            if (CommandLine.args.useClassProtection)
+            {
+                lines.AddRange(from theFunc
+                                   in
+                                   functions.Where(
+                                       func => !func.accessLevel.HasValue || func.accessLevel == FuncAccessLevel.PUBLIC)
+                               from line
+                                   in theFunc.asClassDeclaration()
+                               select "    " + line);
+            }
+            else
+            {
+                lines.AddRange(from theFunc
+                                   in
+                                   functions
+                               from line
+                                   in theFunc.asClassDeclaration()
+                               select "    " + line);
+            }
 
             if (data.Count > 0)
             {
@@ -156,23 +169,26 @@ namespace SymbolParser
                 lines.AddRange(data.Select(data => "    " + data.ToString() + ";").ToList());
             }
 
-            lines.Add("");
-            lines.Add("protected:");
+            if (CommandLine.args.useClassProtection)
+            {
+                lines.Add("");
+                lines.Add("protected:");
 
-            lines.AddRange(from theFunc
-                               in functions.Where(func => func.accessLevel == FuncAccessLevel.PROTECTED)
-                           from line
-                               in theFunc.asClassDeclaration()
-                           select "    " + line);
+                lines.AddRange(from theFunc
+                                   in functions.Where(func => func.accessLevel == FuncAccessLevel.PROTECTED)
+                               from line
+                                   in theFunc.asClassDeclaration()
+                               select "    " + line);
 
-            lines.Add("");
-            lines.Add("private:");
+                lines.Add("");
+                lines.Add("private:");
 
-            lines.AddRange(from theFunc
-                               in functions.Where(func => func.accessLevel == FuncAccessLevel.PRIVATE)
-                           from line
-                               in theFunc.asClassDeclaration()
-                           select "    " + line);
+                lines.AddRange(from theFunc
+                                   in functions.Where(func => func.accessLevel == FuncAccessLevel.PRIVATE)
+                               from line
+                                   in theFunc.asClassDeclaration()
+                               select "    " + line);
+            }
 
             lines.Add("};");
 
