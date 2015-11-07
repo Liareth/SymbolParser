@@ -38,6 +38,7 @@ namespace SymbolParser
         public FuncCallingConvention? callingConvention { get; private set; }
         public UInt32 address { get; private set; }
         public bool isStatic { get; private set; }
+        public bool isGenerated { get; private set; }
 
         public ParsedFunction(ParsedLine line, ParsedClass theClass = null)
         {
@@ -53,7 +54,6 @@ namespace SymbolParser
                 if (templateIndex != -1)
                 {
                     // This is a template. Let's check for template ctor/dtor names.
-                    
                     string className = parentClass.name.Substring(0, templateIndex);
 
                     if (name == className)
@@ -99,6 +99,22 @@ namespace SymbolParser
 
             callingConvention = stringToCallingConv(line.callingConvention);
             address = Convert.ToUInt32(line.address, 16);
+            isGenerated = false;
+        }
+
+        private ParsedFunction()
+        {
+        }
+
+        public static ParsedFunction buildEmptyCtor(ParsedClass parentClass)
+        {
+            ParsedFunction newFunc = new ParsedFunction();
+            newFunc.parentClass = parentClass;
+            newFunc.name = parentClass.name;
+            newFunc.isConstructor = true;
+            newFunc.isGenerated = true;
+            newFunc.parameters = new List<CppType> { new CppType("void") };
+            return newFunc;
         }
 
         public void crossReferenceUsing(ParsedFunction otherFunc)
@@ -127,43 +143,56 @@ namespace SymbolParser
         {
             return new List<String>
             {
-                classSigHeader() + ";"
+                classSigHeader() + (isGenerated ? "; // Auto generated stub!" : ";")
             };
         }
 
         public List<String> asClassDefinition()
         {
-            if (CommandLine.args.target == CommandLineArgs.WINDOWS)
+            if (isGenerated)
             {
                 return new List<String>
                 {
                     classSigSource(),
                     "{",
-                    "    _asm",
-                    "    {",
-                    "        leave;",
-                    "        mov eax, " + addressAsString() + ";",
-                    "        jmp eax;",
-                    "    };",
+                    "    // Auto generated stub!",
                     "}"
                 };
             }
             else
             {
-                return new List<String>
+                if (CommandLine.args.target == CommandLineArgs.WINDOWS)
                 {
-                    classSigSource(),
-                    "{",
-                    "    __asm__ __volatile__",
-                    "    (",
-                    "        \"leave;\"",
-                    "        \"jmp *%0;\"",
-                    "        : // No outputs",
-                    "        : \"r\" (" + addressAsString() + ")",
-                    "        : // No clobbered registers",
-                    "    );",
-                    "}"
-                };
+                    return new List<String>
+                    {
+                        classSigSource(),
+                        "{",
+                        "    _asm",
+                        "    {",
+                        "        leave;",
+                        "        mov eax, " + addressAsString() + ";",
+                        "        jmp eax;",
+                        "    };",
+                        "}"
+                    };
+                }
+                else
+                {
+                    return new List<String>
+                    {
+                        classSigSource(),
+                        "{",
+                        "    __asm__ __volatile__",
+                        "    (",
+                        "        \"leave;\"",
+                        "        \"jmp *%0;\"",
+                        "        : // No outputs",
+                        "        : \"r\" (" + addressAsString() + ")",
+                        "        : // No clobbered registers",
+                        "    );",
+                        "}"
+                    };
+                }
             }
         }
 

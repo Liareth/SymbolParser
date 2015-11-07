@@ -54,6 +54,9 @@ namespace SymbolParser
         {
             List<string> clean = cleanFile(CommandLine.args.parse);
             List<ParsedClass> classes = getClasses(getParsedLines(clean));
+            List<ParsedStruct> structs = getStructs(File.ReadAllLines(CommandLine.args.structs).ToList());
+
+            addStructsToClasses(structs, classes);
 
             if (CommandLine.args.crossref != null)
             {
@@ -65,6 +68,12 @@ namespace SymbolParser
 
             dumpStandaloneFiles(classes);
             dumpClassFiles(classes);
+        }
+
+        public static string preprocessTemplate(string line)
+        {
+            List<string> matching = SymbolParser.getMatchingBrackets(line);
+            return matching.Aggregate(line, (current, match) => current.Replace(match, match.Replace(" ", "^")));
         }
 
         public static string handleTemplatedName(string templatedName)
@@ -233,6 +242,25 @@ namespace SymbolParser
                 parsedFunctionDict[thisClass].Add(new ParsedFunction(line, thisClass));
             }
 
+            foreach (KeyValuePair<ParsedClass, List<ParsedFunction>> pair in parsedFunctionDict)
+            {
+                if (pair.Key.name == ParsedClass.FREE_STANDING_CLASS_NAME)
+                {
+                    continue;
+                }
+
+                // We need to insert a completely empty ctor for classes that don't have one.
+                bool hasEmptyCtor = pair.Value.Any(func => func.isConstructor && 
+                                                           func.parameters.Count == 1 && 
+                                                           func.parameters[0].isBaseType && 
+                                                           func.parameters[0].baseType == BuiltInCppTypes.VOID);
+
+                if (!hasEmptyCtor)
+                {
+                    pair.Value.Add(ParsedFunction.buildEmptyCtor(pair.Key));
+                }
+            }
+
             List<ParsedClass> parsedClasses = parsedClassDict.Values.OrderBy(theClass => theClass.name).ToList();
 
             foreach (KeyValuePair<ParsedClass, List<ParsedFunction>> pair in parsedFunctionDict)
@@ -241,6 +269,84 @@ namespace SymbolParser
             }
 
             return parsedClasses;
+        }
+
+        // Parses structs 
+        private List<ParsedStruct> getStructs(List<string> lines)
+        {
+            List<ParsedStruct> structs = new List<ParsedStruct>();
+
+            for (int i = 0; i < lines.Count; ++i)
+            {
+                string line = lines[i];
+
+                if (line.Contains("struct") && line.Contains(";"))
+                {
+                    // Forward declaration -- ignore;
+                    continue;
+                }
+
+                // Start of a struct definition
+                List<string> linesInThisStruct = new List<string>();
+                linesInThisStruct.Add(line);
+
+                for (int j = i + 1; j < lines.Count; ++j, ++i)
+                {
+                    string nextLine = lines[j];
+                    linesInThisStruct.Add(nextLine);
+
+                    if (nextLine == "};")
+                    {
+                        // End of struct definition.
+                        ++i;
+                        break;
+                    }
+                }
+
+                ParsedStruct newStruct = new ParsedStruct(linesInThisStruct);
+
+                if (!String.IsNullOrWhiteSpace(newStruct.name))
+                {
+                    structs.Add(newStruct);
+                }
+            }
+
+            return structs;
+        }
+
+        private void addStructsToClasses(List<ParsedStruct> structs, List<ParsedClass> classes)
+        {
+            List<ParsedClass> classesToAdd = new List<ParsedClass>();
+
+            foreach (ParsedStruct theStruct in structs)
+            {
+                ParsedClass matchingClass = null;
+
+                foreach (ParsedClass theClass in classes)
+                {
+                    if (theClass.name == theStruct.name)
+                    {
+                        matchingClass = theClass;
+                        break;
+                    }
+                }
+
+                List<NamedCppType> data = theStruct.members.Select(member => member.data).ToList();
+
+                if (matchingClass == null)
+                {
+                    ParsedClass newParsedClass = new ParsedClass(theStruct.name);
+                    newParsedClass.addData(data);
+                    classesToAdd.Add(newParsedClass);
+                }
+                else
+                {
+                    matchingClass.addData(data);
+                }
+            }
+
+            classes.AddRange(classesToAdd);
+            classes = classes.OrderBy(theClass => theClass.name).ToList();
         }
 
         private void handleDependencies(List<ParsedClass> classes)
@@ -258,6 +364,14 @@ namespace SymbolParser
                     }
 
                     dependencies.AddRange(theFunction.parameters.Where(param => !param.isBaseType));
+                }
+
+                foreach (NamedCppType theData in theClass.data)
+                {
+                    if (!theData.type.isBaseType)
+                    {
+                        dependencies.Add(theData.type);
+                    }
                 }
 
                 // Sorting the list beforehand ensures we don't have to check for duplicates every time.
@@ -303,7 +417,6 @@ namespace SymbolParser
 
                         needConcreteDef = false;
                     }
-
                 }
             }
         }      
@@ -471,6 +584,8 @@ namespace SymbolParser
             header.Add("#ifndef " + headerGuard);
             header.Add("#define " + headerGuard);
             header.Add("");
+            header.Add("#include <cstdint>");
+            header.Add("");
             header.AddRange(theClass.headerDependencies.Select(dependency => String.Format("#include \"{0}.hpp\"", dependency.name)));
             header.AddRange(theClass.unknownDependencies.Select(dependency => String.Format("#include \"unknown_{0}.hpp\"", dependency.type)));
 
@@ -481,6 +596,8 @@ namespace SymbolParser
 
             header.Add("namespace " + CommandLine.args.libNamespace + " {");
             header.Add("");
+            header.Add("namespace " + CommandLine.args.classNamespace + " {");
+            header.Add("");
 
             if (theClass.sourceDependencies.Count > 0)
             {
@@ -490,6 +607,8 @@ namespace SymbolParser
             }
 
             header.AddRange(theClass.asClassHeader());
+            header.Add("");
+            header.Add("}");
             header.Add("");
             header.Add("}");
             header.Add("");

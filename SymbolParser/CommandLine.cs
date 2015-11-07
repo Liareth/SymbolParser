@@ -11,6 +11,7 @@ namespace SymbolParser
 
         public string parse;
         public string crossref;
+        public string structs;
         public string libNamespace = "NWNXLib";
         public string functionNamespace = "Functions";
         public string classNamespace = "API";

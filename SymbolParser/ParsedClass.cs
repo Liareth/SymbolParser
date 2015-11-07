@@ -8,17 +8,23 @@ namespace SymbolParser
         public const string FREE_STANDING_CLASS_NAME = "FreeStanding";
         public string name { get; private set; }
         public List<ParsedFunction> functions { get; private set; }
+        public List<NamedCppType> data { get; private set; }
         public List<ParsedClass> headerDependencies { get; private set; }
         public List<ParsedClass> sourceDependencies { get; private set; }
         public List<CppType> unknownDependencies { get; private set; }
 
         public ParsedClass(ParsedLine parsedLine)
+            : this(parsedLine.className == null ? 
+                   FREE_STANDING_CLASS_NAME : 
+                   SymbolParser.handleTemplatedName(parsedLine.className))
         {
-            name = parsedLine.className == null
-                       ? FREE_STANDING_CLASS_NAME
-                       : SymbolParser.handleTemplatedName(parsedLine.className);
+        }
 
+        public ParsedClass(string className)
+        {
+            name = className;
             functions = new List<ParsedFunction>();
+            data = new List<NamedCppType>();
             headerDependencies = new List<ParsedClass>();
             sourceDependencies = new List<ParsedClass>();
             unknownDependencies = new List<CppType>();
@@ -94,6 +100,11 @@ namespace SymbolParser
             }
         }
 
+        public void addData(List<NamedCppType> newData)
+        {
+            data.AddRange(newData);
+        }
+
         public List<string> asClassSource()
         {
             var lines = new List<string>();
@@ -111,7 +122,7 @@ namespace SymbolParser
         {
             var lines = new List<string>();
 
-            foreach (ParsedFunction function in functions)
+            foreach (ParsedFunction function in functions.Where(func => !func.isGenerated))
             {
                 lines.AddRange(function.asDeclaration());
             }
@@ -137,6 +148,13 @@ namespace SymbolParser
                            from line
                                in theFunc.asClassDeclaration()
                            select "    " + line);
+
+            if (data.Count > 0)
+            {
+                lines.Add("");
+                lines.Add("    // Class data.");
+                lines.AddRange(data.Select(data => "    " + data.ToString() + ";").ToList());
+            }
 
             lines.Add("");
             lines.Add("protected:");

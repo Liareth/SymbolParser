@@ -50,6 +50,8 @@ namespace SymbolParser
         private readonly string m_representation;
         public bool isPointer { get; private set; }
         public uint pointerDepth { get; private set; }
+        public bool isArray { get; private set; }
+        public uint arraySize { get; private set; }
         public bool isReference { get; private set; }
         public bool isConst { get; private set; }
         public bool isConstPointer { get; private set; }
@@ -61,27 +63,52 @@ namespace SymbolParser
 
         public string type { get; private set; }
         public BuiltInCppTypes? baseType { get; private set; }
-        public uint sizeInBytes { get; private set; }
 
         public CppType(string rawType)
         {
-            isPointer = getIsPointer(rawType);
+            rawType = rawType.Replace("::", "");
 
-            if (isPointer)
+            // If there are brackets in the type, it's a function pointer, so let's set our stuff manually.
+            // This should be improved in the future to properly support function pointers.
+            if (rawType.Contains('(') || rawType.Contains(')'))
             {
-                pointerDepth = getPointerDepth(rawType);
+                baseType = BuiltInCppTypes.FUNCTION;
+                type = getType(baseType.Value);
+                isPointer = true;
+                pointerDepth = 1;
+                isArray = false;
+                arraySize = 0;
+                isConst = false;
+                isConstPointer = false;
+                isReference = false;
             }
+            else
+            {
+                isPointer = getIsPointer(rawType);
 
-            isReference = getIsReference(rawType);
-            isConst = getIsConst(rawType);
-            isConstPointer = getIsConstPointer(rawType);
-            baseType = getBaseType(rawType);
+                if (isPointer)
+                {
+                    pointerDepth = getPointerDepth(rawType);
+                }
 
-            type = baseType.HasValue
-                        ? getType(baseType.Value)
-                        : getType(rawType);
+                isArray = getIsArray(rawType);
 
-            m_representation = toStringRepresentation();
+                if (isArray)
+                {
+                    arraySize = getArraySize(rawType);
+                }
+
+                isReference = getIsReference(rawType);
+                isConst = getIsConst(rawType);
+                isConstPointer = getIsConstPointer(rawType);
+                baseType = getBaseType(rawType);
+
+                type = baseType.HasValue
+                            ? getType(baseType.Value)
+                            : getType(rawType);
+
+                m_representation = toStringRepresentation();
+            }
         }
 
         // Converts an array to a pointer type:
@@ -147,12 +174,29 @@ namespace SymbolParser
             return line;
         }
 
+        private static bool getIsArray(string type)
+        {
+            return type.Split('[', ']').Length > 1;
+        }
+
+        private static uint getArraySize(string type)
+        {
+            return uint.Parse(type.Split('[', ']')[1]);
+        }
+
         private static string cleanType(string type)
         {
             type = type.Replace("*", "");
             type = type.Replace("&", "");
             type = type.Replace("const", "");
             type = type.Replace("^", " ");
+
+            int bracket = type.IndexOf('[');
+
+            if (bracket > 0)
+            {
+                type = type.Substring(0, bracket);
+            }
 
             return type.Trim();
         }
@@ -213,65 +257,28 @@ namespace SymbolParser
 
         private static string getType(BuiltInCppTypes type)
         {
-            if (CommandLine.args.target == CommandLineArgs.WINDOWS)
-            {
-                switch (type)
-                {
-                    case BuiltInCppTypes.INT8:
-                        return "__int8";
-                    case BuiltInCppTypes.UNSIGNED_INT8:
-                        return "unsigned __int8";
-                    case BuiltInCppTypes.SIGNED_INT8:
-                        return "signed __int8";
-                    case BuiltInCppTypes.INT16:
-                        return "__int16";
-                    case BuiltInCppTypes.UNSIGNED_INT16:
-                        return "unsigned __int16";
-                    case BuiltInCppTypes.SIGNED_INT16:
-                        return "signed __int16";
-                    case BuiltInCppTypes.INT32:
-                        return "__int32";
-                    case BuiltInCppTypes.UNSIGNED_INT32:
-                        return "unsigned __int32";
-                    case BuiltInCppTypes.SIGNED_INT32:
-                        return "signed __int32";
-                    case BuiltInCppTypes.INT64:
-                        return "__int64";
-                    case BuiltInCppTypes.UNSIGNED_INT64:
-                        return "unsigned __int64";
-                    case BuiltInCppTypes.SIGNED_INT64:
-                        return "signed __int64";
-                }
-            }
-            else
-            {
-                switch (type)
-                {
-                    case BuiltInCppTypes.INT8:
-                    case BuiltInCppTypes.SIGNED_INT8:
-                        return "int8_t";
-                    case BuiltInCppTypes.UNSIGNED_INT8:
-                        return "uint8_t";
-                    case BuiltInCppTypes.INT16:
-                    case BuiltInCppTypes.SIGNED_INT16:
-                        return "int16_t";
-                    case BuiltInCppTypes.UNSIGNED_INT16:
-                        return "uint16_t";
-                    case BuiltInCppTypes.INT32:
-                    case BuiltInCppTypes.SIGNED_INT32:
-                        return "int32_t";
-                    case BuiltInCppTypes.UNSIGNED_INT32:
-                        return "uint32_t";
-                    case BuiltInCppTypes.INT64:
-                    case BuiltInCppTypes.SIGNED_INT64:
-                        return "int64_t";
-                    case BuiltInCppTypes.UNSIGNED_INT64:
-                        return "uint64_t";
-                }
-            }
-
             switch (type)
             {
+                case BuiltInCppTypes.INT8:
+                case BuiltInCppTypes.SIGNED_INT8:
+                    return "int8_t";
+                case BuiltInCppTypes.UNSIGNED_INT8:
+                    return "uint8_t";
+                case BuiltInCppTypes.INT16:
+                case BuiltInCppTypes.SIGNED_INT16:
+                    return "int16_t";
+                case BuiltInCppTypes.UNSIGNED_INT16:
+                    return "uint16_t";
+                case BuiltInCppTypes.INT32:
+                case BuiltInCppTypes.SIGNED_INT32:
+                    return "int32_t";
+                case BuiltInCppTypes.UNSIGNED_INT32:
+                    return "uint32_t";
+                case BuiltInCppTypes.INT64:
+                case BuiltInCppTypes.SIGNED_INT64:
+                    return "int64_t";
+                case BuiltInCppTypes.UNSIGNED_INT64:
+                    return "uint64_t";
                 case BuiltInCppTypes.BOOL:
                     return "bool";
                 case BuiltInCppTypes.CHAR:
@@ -327,69 +334,48 @@ namespace SymbolParser
             // Strip everything that might mess with this.
             type = cleanType(type);
 
-            if (CommandLine.args.target == CommandLineArgs.WINDOWS)
-            {
-                switch (type)
-                {
-                    case "__int8":
-                        return BuiltInCppTypes.INT8;
-                    case "unsigned __int8":
-                    case "unsigned^__int8":
-                        return BuiltInCppTypes.UNSIGNED_INT8;
-                    case "signed __int8":
-                    case "signed^__int8":
-                        return BuiltInCppTypes.SIGNED_INT8;
-                    case "__int16":
-                        return BuiltInCppTypes.INT16;
-                    case "unsigned __int16":
-                    case "unsigned^__int16":
-                        return BuiltInCppTypes.UNSIGNED_INT16;
-                    case "signed __int16":
-                    case "signed^__int16":
-                        return BuiltInCppTypes.SIGNED_INT16;
-                    case "__int32":
-                        return BuiltInCppTypes.INT32;
-                    case "unsigned __int32":
-                    case "unsigned^__int32":
-                        return BuiltInCppTypes.UNSIGNED_INT32;
-                    case "signed __int32":
-                    case "signed^__int32":
-                        return BuiltInCppTypes.SIGNED_INT32;
-                    case "__int64":
-                        return BuiltInCppTypes.INT64;
-                    case "unsigned __int64":
-                    case "unsigned^__int64":
-                        return BuiltInCppTypes.UNSIGNED_INT64;
-                    case "signed __int64":
-                    case "signed^__int64":
-                        return BuiltInCppTypes.SIGNED_INT64;
-                }
-            }
-            else
-            {
-                switch (type)
-                {
-                    case "int8_t":
-                        return BuiltInCppTypes.INT8;
-                    case "uint8_t":
-                        return BuiltInCppTypes.UNSIGNED_INT8;
-                    case "int16_t":
-                        return BuiltInCppTypes.INT16;
-                    case "uint16_t":
-                        return BuiltInCppTypes.UNSIGNED_INT16;
-                    case "int32_t":
-                        return BuiltInCppTypes.INT32;
-                    case "uint32_t":
-                        return BuiltInCppTypes.UNSIGNED_INT32;
-                    case "int64_t":
-                        return BuiltInCppTypes.INT64;
-                    case "uint64_t":
-                        return BuiltInCppTypes.UNSIGNED_INT64;
-                }
-            }
-
             switch (type)
             {
+                case "__int8":
+                case "int8_t":
+                    return BuiltInCppTypes.INT8;
+                case "unsigned __int8":
+                case "unsigned^__int8":
+                case "uint8_t":
+                    return BuiltInCppTypes.UNSIGNED_INT8;
+                case "signed __int8":
+                case "signed^__int8":
+                    return BuiltInCppTypes.SIGNED_INT8;
+                case "__int16":
+                case "int16_t":
+                    return BuiltInCppTypes.INT16;
+                case "unsigned __int16":
+                case "unsigned^__int16":
+                case "uint16_t":
+                    return BuiltInCppTypes.UNSIGNED_INT16;
+                case "signed __int16":
+                case "signed^__int16":
+                    return BuiltInCppTypes.SIGNED_INT16;
+                case "__int32":
+                case "int32_t":
+                    return BuiltInCppTypes.INT32;
+                case "unsigned __int32":
+                case "unsigned^__int32":
+                case "uint32_t":
+                    return BuiltInCppTypes.UNSIGNED_INT32;
+                case "signed __int32":
+                case "signed^__int32":
+                    return BuiltInCppTypes.SIGNED_INT32;
+                case "__int64":
+                case "int64_t":
+                    return BuiltInCppTypes.INT64;
+                case "unsigned __int64":
+                case "unsigned^__int64":
+                case "uint64_t":
+                    return BuiltInCppTypes.UNSIGNED_INT64;
+                case "signed __int64":
+                case "signed^__int64":
+                    return BuiltInCppTypes.SIGNED_INT64;
                 case "bool":
                     return BuiltInCppTypes.BOOL;
                 case "char":
@@ -489,11 +475,18 @@ namespace SymbolParser
                 {
                     sb.Append("*");
                 }
+
+                if (isConstPointer)
+                {
+                    sb.Append(" const");
+                }
             }
 
-            if (isConstPointer)
+            if (isArray)
             {
-                sb.Append(" const");
+                sb.Append('[');
+                sb.Append(arraySize.ToString());
+                sb.Append(']');
             }
 
             return sb.ToString();

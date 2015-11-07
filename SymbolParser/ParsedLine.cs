@@ -76,7 +76,7 @@ namespace SymbolParser
 
             var parserState = ParseState.PREFIX_STATE;
 
-            string[] components = preprocessTemplate(line).Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
+            string[] components = SymbolParser.preprocessTemplate(line).Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
 
             for (var componentCounter = 0; componentCounter < components.Length; ++componentCounter)
             {
@@ -507,12 +507,6 @@ namespace SymbolParser
         private static bool getIsConst(string[] components, int currentIndex)
         {
             return components[currentIndex] == "const";
-        }
-
-        private static string preprocessTemplate(string line)
-        {
-            List<string> matching = SymbolParser.getMatchingBrackets(line);
-            return matching.Aggregate(line, (current, match) => current.Replace(match, match.Replace(" ", "^")));
         }
 
         public override string ToString()
