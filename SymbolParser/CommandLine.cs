@@ -18,9 +18,9 @@ namespace SymbolParser
         public string headerGuardPrefix = "NWNX_UNIFIED__";
         public string outDir;
         public string target = LINUX;
-        public bool makeFunctions = true;
-        public bool makeClasses = true;
         public bool useClassProtection = false;
+        public bool useStatic = false;
+        public bool useVirtual = false;
     }
 
     public class CommandLine

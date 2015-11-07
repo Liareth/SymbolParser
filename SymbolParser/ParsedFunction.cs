@@ -417,12 +417,12 @@ namespace SymbolParser
         {
             var sb = new StringBuilder();
 
-            if (isStatic)
+            if (CommandLine.args.useStatic && isStatic)
             {
                 sb.Append("static ");
             }
 
-            if (isVirtual)
+            if (CommandLine.args.useVirtual && isVirtual)
             {
                 sb.Append("virtual ");
             }
@@ -449,7 +449,7 @@ namespace SymbolParser
             {
                 if (callingConvention.HasValue)
                 {
-                    sb.Append(" " + ParsedFunction.callingConvToString(callingConvention));
+                    sb.Append(" " + callingConvToString(callingConvention));
                 }
             }
 
