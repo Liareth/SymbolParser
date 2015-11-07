@@ -78,7 +78,12 @@ namespace SymbolParser
 
         private static string prepareType(string original)
         {
-            original = original.Replace(";", "").Replace(" *", "* ");
+            original = original.Replace(";", "");
+
+            while (original.Contains(" *"))
+            {
+                original = original.Replace(" *", "* ");
+            }
 
             while (original[0] == ' ')
             {
