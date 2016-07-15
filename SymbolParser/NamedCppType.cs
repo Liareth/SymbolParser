@@ -10,7 +10,6 @@
         {
             rawType = SymbolParser.handleTemplatedName(SymbolParser.preprocessTemplate(rawType));
 
-            // Discard bitfield data for now.
             string[] bitFieldSplit = rawType.Split(':');
             string[] typeSplit = bitFieldSplit[0].Trim().Split(' ');
 
