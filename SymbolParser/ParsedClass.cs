@@ -5,7 +5,6 @@ namespace SymbolParser
 {
     public class ParsedClass
     {
-        public const string FREE_STANDING_CLASS_NAME = "FreeStanding";
         public string name { get; private set; }
         public List<ParsedFunction> functions { get; private set; }
         public List<NamedCppType> data { get; private set; }
@@ -15,9 +14,7 @@ namespace SymbolParser
         public List<CppType> unknownDependencies { get; private set; }
 
         public ParsedClass(ParsedLine parsedLine)
-            : this(parsedLine.className == null ? 
-                   FREE_STANDING_CLASS_NAME : 
-                   SymbolParser.handleTemplatedName(parsedLine.className))
+            : this(SymbolParser.handleTemplatedName(parsedLine.className))
         {
         }
 
@@ -38,8 +35,7 @@ namespace SymbolParser
 
             // Sort the functions, so we only need to compare with the next one.
             // Generated functions -- Constructors -- destructors -- alphabetical func names.
-            functions = functions.OrderByDescending(gen => gen.isGenerated)
-                                 .ThenByDescending(ctor => ctor.isConstructor)
+            functions = functions.OrderByDescending(ctor => ctor.isConstructor)
                                  .ThenByDescending(dtor => dtor.isDestructor)
                                  .ThenBy(funcName => funcName.name).ToList();
 
@@ -125,7 +121,7 @@ namespace SymbolParser
         {
             var lines = new List<string>();
 
-            foreach (ParsedFunction function in functions.Where(func => !func.isGenerated))
+            foreach (ParsedFunction function in functions)
             {
                 lines.AddRange(function.asDeclaration());
             }
@@ -141,7 +137,7 @@ namespace SymbolParser
 
             var lines = new List<string>();
 
-            string className = "class " + name;
+            string className = "struct " + name;
 
             if (inherits.Count != 0)
             {
@@ -157,58 +153,15 @@ namespace SymbolParser
 
             lines.Add(className);
             lines.Add("{");
-            lines.Add("public:");
-
-            if (CommandLine.args.useClassProtection)
-            {
-                lines.AddRange(from theFunc
-                                   in
-                                   functions.Where(
-                                       func => !func.accessLevel.HasValue || func.accessLevel == FuncAccessLevel.PUBLIC)
-                               from line
-                                   in theFunc.asClassDeclaration()
-                               select "    " + line);
-            }
-            else
-            {
-                lines.AddRange(from theFunc
-                                   in
-                                   functions
-                               from line
-                                   in theFunc.asClassDeclaration()
-                               select "    " + line);
-            }
 
             if (data.Count > 0)
             {
-                lines.Add("");
-                lines.Add("    // Class data.");
                 lines.AddRange(data.Select(data => "    " + data.ToString() + ";").ToList());
             }
 
-            if (CommandLine.args.useClassProtection)
-            {
-                lines.Add("");
-                lines.Add("protected:");
-
-                lines.AddRange(from theFunc
-                                   in functions.Where(func => func.accessLevel == FuncAccessLevel.PROTECTED)
-                               from line
-                                   in theFunc.asClassDeclaration()
-                               select "    " + line);
-
-                lines.Add("");
-                lines.Add("private:");
-
-                lines.AddRange(from theFunc
-                                   in functions.Where(func => func.accessLevel == FuncAccessLevel.PRIVATE)
-                               from line
-                                   in theFunc.asClassDeclaration()
-                               select "    " + line);
-            }
-
             lines.Add("};");
-
+            lines.Add("");
+            lines.AddRange(functions.SelectMany(fnc => fnc.asClassDeclaration()));
             return lines;
         }
 

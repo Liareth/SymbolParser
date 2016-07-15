@@ -38,7 +38,6 @@ namespace SymbolParser
         public FuncCallingConvention? callingConvention { get; private set; }
         public UInt32 address { get; private set; }
         public bool isStatic { get; private set; }
-        public bool isGenerated { get; private set; }
 
         public ParsedFunction(ParsedLine line, ParsedClass theClass = null)
         {
@@ -92,29 +91,22 @@ namespace SymbolParser
 
             parameters = new List<CppType>();
 
-            foreach (string parameter in line.parameters.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string parameter in line.parameters.Split(','))
             {
-                parameters.Add(new CppType(SymbolParser.handleTemplatedName(parameter)));
+                CppType param = new CppType(SymbolParser.handleTemplatedName(parameter));
+
+                if (param.isPointer || (param.baseType.HasValue && param.baseType.Value != BuiltInCppTypes.VOID))
+                {
+                    parameters.Add(param);
+                }
             }
 
             callingConvention = stringToCallingConv(line.callingConvention);
             address = Convert.ToUInt32(line.address, 16);
-            isGenerated = false;
         }
 
         private ParsedFunction()
         {
-        }
-
-        public static ParsedFunction buildEmptyCtor(ParsedClass parentClass)
-        {
-            ParsedFunction newFunc = new ParsedFunction();
-            newFunc.parentClass = parentClass;
-            newFunc.name = parentClass.name;
-            newFunc.isConstructor = true;
-            newFunc.isGenerated = true;
-            newFunc.parameters = new List<CppType> { new CppType("void") };
-            return newFunc;
         }
 
         public void crossReferenceUsing(ParsedFunction otherFunc)
@@ -134,7 +126,6 @@ namespace SymbolParser
         {
             return new List<String>
             {
-                "// " + ToString(),
                 String.Format("{0} = {1};", standaloneSig(), addressAsString())
             };
         }
@@ -143,60 +134,61 @@ namespace SymbolParser
         {
             return new List<String>
             {
-                classSigHeader() + (isGenerated ? "; // Auto generated stub!" : ";")
+                classSigHeader() + ";"
             };
         }
 
         public List<String> asClassDefinition()
         {
-            if (isGenerated)
+            List<string> definition = new List<string>();
+            definition.Add(classSigSource());
+            definition.Add("{");
+
             {
-                return new List<String>
+                string funcPtr = "    ";
+                funcPtr += "using FuncPtrType = ";
+                funcPtr += returnType != null ? returnType.ToString() : "void";
+                funcPtr += "(" + callingConvToString(FuncCallingConvention.THISCALL) + " *)";
+                funcPtr += "(";
+                funcPtr += parentClass.name + "*, ";
+                
+                if (parameters.Count != 0)
                 {
-                    classSigSource(),
-                    "{",
-                    "    // Auto generated stub!",
-                    "}"
-                };
+                    funcPtr += parameters.Select(param => param.ToString()).Aggregate((first, second) => first + ", " + second);
+                }
+
+                funcPtr = funcPtr.TrimEnd(new char[] { ' ', ',' }) + ");";
+                definition.Add(funcPtr);
             }
-            else
+
+            definition.Add("    FuncPtrType func = reinterpret_cast<FuncPtrType>(" + "Functions::" + parentClass.name + "__" + friendlyName + ");");
+
+
             {
-                if (CommandLine.args.target == CommandLineArgs.WINDOWS)
+                string body = "    ";
+
+                if (returnType != null)
                 {
-                    return new List<String>
-                    {
-                        classSigSource(),
-                        "{",
-                        "    _asm",
-                        "    {",
-                        "        leave;",
-                        "        mov eax, " + addressAsString() + ";",
-                        "        jmp eax;",
-                        "    };",
-                        "}"
-                    };
+                    body += "return ";
                 }
-                else
+
+                body += "func(thisPtr, ";
+
+                for (int i = 0; i < parameters.Count; ++i)
                 {
-                    return new List<String>
-                    {
-                        classSigSource(),
-                        "{",
-                        "    __asm__ __volatile__",
-                        "    (",
-                        "        \"leave;\"",
-                        "        \"jmp *%0;\"",
-                        "        : // No outputs",
-                        "        : \"r\" (" + addressAsString() + ")",
-                        "        : // No clobbered registers",
-                        "    );",
-                        "}"
-                    };
+                    body += "a" + i.ToString() + ", ";
                 }
+
+                body = body.TrimEnd(new char[] { ' ', ',' }) + ");";
+
+                definition.Add(body);
             }
+
+            definition.Add("}");
+            return definition;
         }
 
-        public static FuncAccessLevel? stringToAccessLevel(string accessLevel)
+        public static FuncAccessLevel? stringToAccessLevel(string accessLevel) 
         {
             switch (accessLevel)
             {
@@ -228,7 +220,7 @@ namespace SymbolParser
             return null;
         }
 
-        public static string callingConvToString(FuncCallingConvention? convention)
+        public static string callingConvToString(FuncCallingConvention convention)
         {
             if (CommandLine.args.target == CommandLineArgs.WINDOWS)
             {
@@ -373,16 +365,7 @@ namespace SymbolParser
 
         private string getCorrectReturnTypeIgnoreCtors()
         {
-            string retType = getCorrectReturnType();
-
-            if (retType == null)
-            {
-                return DEFAULT_RET_TYPE;
-            }
-            else
-            {
-                return retType;
-            }
+            return getCorrectReturnType() ?? DEFAULT_RET_TYPE;
         }
 
         private string decorativeSig()
@@ -399,94 +382,65 @@ namespace SymbolParser
 
         private string standaloneSig()
         {
-            var sb = new StringBuilder();
-
-            sb.Append("constexpr uintptr_t ");
-
-            if (parentClass != null)
-            {
-                sb.Append(parentClass.name);
-                sb.Append("__");
-            }
-
-            sb.Append(friendlyName);
-            return sb.ToString();
+            return "constexpr uintptr_t " + parentClass.name + "__" + friendlyName;
         }
 
         private string classSigHeader()
         {
-            var sb = new StringBuilder();
-
-            if (CommandLine.args.useStatic && isStatic)
-            {
-                sb.Append("static ");
-            }
-
-            if (CommandLine.args.useVirtual && isVirtual)
-            {
-                sb.Append("virtual ");
-            }
-
-            string sig = baseSig();
-
-            if (CommandLine.args.target == CommandLineArgs.WINDOWS)
-            {
-                if (callingConvention.HasValue)
-                {
-                    int funcIndex = sig.IndexOf(name, StringComparison.Ordinal);
-
-                    if (funcIndex != -1)
-                    {
-                        sig = sig.Substring(0, funcIndex) + callingConvToString(callingConvention) + " " +
-                              sig.Substring(funcIndex, sig.Length - funcIndex);
-                    }
-                }
-            }
-
-            sb.Append(sig);
-
-            if (CommandLine.args.target == CommandLineArgs.LINUX)
-            {
-                if (callingConvention.HasValue)
-                {
-                    sb.Append(" " + callingConvToString(callingConvention));
-                }
-            }
-
-            return sb.ToString();
+            return baseSig();
         }
 
-        private string formattedParams()
+        private string getFormattedParams(bool includeParameterNames = false)
         {
-            return parameters.Select(param => param.ToString()).Aggregate((first, second) => first + ", " + second);
+            if (parameters.Count == 0)
+            {
+                return "";
+            }
+
+            string formattedParams = "";
+
+            for (int i = 0; i < parameters.Count; ++i)
+            {
+                formattedParams += parameters[i].ToString();
+
+                if (includeParameterNames)
+                {
+                    formattedParams += " a" + i.ToString();
+                }
+
+                formattedParams += ", ";
+            }
+
+            formattedParams = formattedParams.TrimEnd(new char[] { ' ', ',' });
+            return formattedParams;
         }
 
         private string classSigSource()
         {
-            string headerDef = baseSig();
-            // We don't need to check if this is valid, because a valid function
-            // will always have a name.
-            int indexOfFuncName = headerDef.IndexOf(name, StringComparison.Ordinal);
-            return headerDef.Insert(indexOfFuncName, parentClass.name + "::");
+            return baseSig(true);
         }
 
         private string stdFunctionSig()
         {
-            return String.Format("std::function<{0}({1})>", getCorrectReturnTypeIgnoreCtors(), formattedParams());
+            return String.Format("std::function<{0}({1})>", getCorrectReturnTypeIgnoreCtors(), getFormattedParams());
         }
 
-        private string baseSig()
+        private string baseSig(bool includeParameterNames = false)
         {
-            string retType = getCorrectReturnType();
+            string sig = getCorrectReturnTypeIgnoreCtors() + " ";
+            sig += parentClass.name + "__" + friendlyName;
+            sig += "(" + parentClass.name + "* thisPtr";
 
-            if (retType != null)
+            string param = getFormattedParams(includeParameterNames);
+
+            if (!String.IsNullOrWhiteSpace(param))
             {
-                retType += " ";
+                sig += ", " + param;
             }
 
-            return (retType ?? "") +
-                   name + "(" + formattedParams() + ")" +
-                   (isConst ? " const" : "");
+            sig += ")";
+
+            return sig;
         }
 
         public override string ToString()

@@ -42,6 +42,7 @@ namespace SymbolParser
             "bad_typeid",
             "exception",
             "type_info",
+            "..."
         };
 
         public readonly string[] whitelistedFreestandingPatterns =
@@ -212,26 +213,13 @@ namespace SymbolParser
 
             foreach (ParsedLine line in parsedLines)
             {
-                ParsedClass thisClass = null;
-                string className = line.className;
-
-                if (className == null)
+                if (line.className == null)
                 {
-                    foreach (string whitelist in whitelistedFreestandingPatterns)
-                    {
-                        if (line.functionName.Contains(whitelist))
-                        {
-                            className = ParsedClass.FREE_STANDING_CLASS_NAME;
-                        }
-                    }
-
-                    if (className == null)
-                    {
-                        continue;
-                    }
+                    continue;
                 }
 
-                parsedClassDict.TryGetValue(handleTemplatedName(className), out thisClass);
+                ParsedClass thisClass = null;
+                parsedClassDict.TryGetValue(handleTemplatedName(line.className), out thisClass);
 
                 if (thisClass == null)
                 {
@@ -241,25 +229,6 @@ namespace SymbolParser
                 }
 
                 parsedFunctionDict[thisClass].Add(new ParsedFunction(line, thisClass));
-            }
-
-            foreach (KeyValuePair<ParsedClass, List<ParsedFunction>> pair in parsedFunctionDict)
-            {
-                if (pair.Key.name == ParsedClass.FREE_STANDING_CLASS_NAME)
-                {
-                    continue;
-                }
-
-                // We need to insert a completely empty ctor for classes that don't have one.
-                bool hasEmptyCtor = pair.Value.Any(func => func.isConstructor && 
-                                                           func.parameters.Count == 1 && 
-                                                           func.parameters[0].isBaseType && 
-                                                           func.parameters[0].baseType == BuiltInCppTypes.VOID);
-
-                if (!hasEmptyCtor)
-                {
-                    pair.Value.Add(ParsedFunction.buildEmptyCtor(pair.Key));
-                }
             }
 
             List<ParsedClass> parsedClasses = parsedClassDict.Values.OrderBy(theClass => theClass.name).ToList();
@@ -539,7 +508,7 @@ namespace SymbolParser
             header.Add("namespace " + CommandLine.args.functionNamespace + " {");
             header.Add("");
 
-            foreach (ParsedClass theClass in classes)
+            foreach (ParsedClass theClass in classes.Where(theClass => theClass.functions.Count != 0))
             {
                 header.AddRange(theClass.asHeader());
                 header.Add("");
@@ -605,7 +574,7 @@ namespace SymbolParser
                 headerFile.Add("");
                 headerFile.Add("namespace " + CommandLine.args.classNamespace + " {");
                 headerFile.Add("");
-                headerFile.Add("class " + unknownType.type + " { };");
+                headerFile.Add("struct " + unknownType.type + " { };");
                 headerFile.Add("");
                 headerFile.Add("}");
                 headerFile.Add("");
@@ -620,6 +589,7 @@ namespace SymbolParser
         private static void buildClassSource(List<string> body, ParsedClass theClass)
         {
             body.Add("#include \"" + theClass.name + ".hpp\"");
+            body.Add("#include \"Functions.hpp\"");
             body.Add("");
 
             if (theClass.sourceDependencies.Count > 0)
@@ -632,29 +602,7 @@ namespace SymbolParser
             body.Add("");
             body.Add("namespace " + CommandLine.args.classNamespace + " {");
             body.Add("");
-
-            if (CommandLine.args.target == CommandLineArgs.LINUX)
-            {
-                body.Add("// Disable optimizations for this file.");
-                body.Add("#pragma GCC push_options");
-                body.Add("#pragma GCC optimize (\"O0\")");
-                body.Add("");
-                body.Add("// Disable no return value warning for this file.");
-                body.Add("#pragma GCC diagnostic push");
-                body.Add("#pragma GCC diagnostic ignored \"-Wreturn-type\"");
-                body.Add("");
-            }
-
             body.AddRange(theClass.asClassSource());
-
-            if (CommandLine.args.target == CommandLineArgs.LINUX)
-            {
-                body.Add("#pragma GCC pop_options");
-                body.Add("");
-                body.Add("#pragma GCC diagnostic pop");
-                body.Add("");
-            }
-
             body.Add("}");
             body.Add("");
             body.Add("}");
