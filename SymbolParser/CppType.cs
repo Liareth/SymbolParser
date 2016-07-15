@@ -377,6 +377,7 @@ namespace SymbolParser
                 case "unsigned long long int":
                 case "unsigned^long^long":
                 case "unsigned^long^long^int":
+                case "dword64":
                     return BuiltInCppTypes.UNSIGNED_INT64;
                 case "signed __int64":
                 case "signed^__int64":
