@@ -11,12 +11,18 @@
             rawType = SymbolParser.handleTemplatedName(SymbolParser.preprocessTemplate(rawType));
 
             // Discard bitfield data for now.
-            var typeSplit = rawType.Split(':')[0].Trim().Split(' ');
+            string[] bitFieldSplit = rawType.Split(':');
+            string[] typeSplit = bitFieldSplit[0].Trim().Split(' ');
 
             string unprocessedType = "";
             for (int i = 0; i < typeSplit.Length - 1; ++i)
             {
                 unprocessedType += typeSplit[i] + " ";
+            }
+
+            if (bitFieldSplit.Length > 1)
+            {
+                unprocessedType += ": " + bitFieldSplit[1].Trim();
             }
 
             string unprocessedName = typeSplit[typeSplit.Length-1];
@@ -35,13 +41,7 @@
 
             name = unprocessedName;
             type = new CppType(unprocessedType);
-
-            m_representation = type.ToString() + " " + name;
-
-            if (type.isArray)
-            {
-                m_representation += "[" + type.arraySize + "]";
-            }
+            m_representation = type.toStringRepresentation(unprocessedName);
         }
 
         public override string ToString()

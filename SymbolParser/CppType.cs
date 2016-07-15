@@ -31,7 +31,6 @@ namespace SymbolParser
 
     public class CppType
     {
-        private readonly string m_representation;
         public bool isPointer { get; private set; }
         public uint pointerDepth { get; private set; }
         public bool isArray { get; private set; }
@@ -39,6 +38,8 @@ namespace SymbolParser
         public bool isReference { get; private set; }
         public bool isConst { get; private set; }
         public bool isConstPointer { get; private set; }
+        public bool isBitfield { get; private set; }
+        public uint bitfieldSize { get; private set; }
 
         public bool isBaseType
         {
@@ -82,17 +83,75 @@ namespace SymbolParser
                     arraySize = getArraySize(rawType);
                 }
 
+                isBitfield = getIsBitfield(rawType);
+
+                if (isBitfield)
+                {
+                    bitfieldSize = getBitfieldSize(rawType);
+                    rawType = rawType.Split(':')[0].Trim();
+                }
+
                 isReference = getIsReference(rawType);
                 isConst = getIsConst(rawType);
                 isConstPointer = getIsConstPointer(rawType);
+
                 baseType = getBaseType(rawType);
 
                 type = baseType.HasValue
                             ? getType(baseType.Value)
                             : getType(rawType);
-
-                m_representation = toStringRepresentation();
             }
+        }
+
+        public string toStringRepresentation(string varName = null)
+        {
+            var sb = new StringBuilder();
+
+            if (isConst)
+            {
+                sb.Append("const ");
+            }
+
+            sb.Append(type);
+
+            if (isReference)
+            {
+                sb.Append("&");
+            }
+
+            if (isPointer)
+            {
+                for (var i = 0; i < pointerDepth; ++i)
+                {
+                    sb.Append("*");
+                }
+
+                if (isConstPointer)
+                {
+                    sb.Append(" const");
+                }
+            }
+
+            if (varName != null)
+            {
+                sb.Append(" ");
+                sb.Append(varName);
+            }
+
+            if (isArray)
+            {
+                sb.Append('[');
+                sb.Append(arraySize.ToString());
+                sb.Append(']');
+            }
+
+            if (isBitfield)
+            {
+                sb.Append(" : ");
+                sb.Append(bitfieldSize.ToString());
+            }
+
+            return sb.ToString();
         }
 
         // Converts an array to a pointer type:
@@ -166,6 +225,16 @@ namespace SymbolParser
         private static uint getArraySize(string type)
         {
             return uint.Parse(type.Split('[', ']')[1]);
+        }
+
+        private static bool getIsBitfield(string type)
+        {
+            return type.Split(':').Length > 1;
+        }
+
+        private static uint getBitfieldSize(string type)
+        {
+            return uint.Parse(type.Split(':')[1].Trim());
         }
 
         private static string cleanType(string type)
@@ -409,48 +478,9 @@ namespace SymbolParser
             return null;
         }
 
-        private string toStringRepresentation()
-        {
-            var sb = new StringBuilder();
-
-            if (isConst)
-            {
-                sb.Append("const ");
-            }
-
-            sb.Append(type);
-
-            if (isReference)
-            {
-                sb.Append("&");
-            }
-
-            if (isPointer)
-            {
-                for (var i = 0; i < pointerDepth; ++i)
-                {
-                    sb.Append("*");
-                }
-
-                if (isConstPointer)
-                {
-                    sb.Append(" const");
-                }
-            }
-
-//             if (isArray)
-//             {
-//                 sb.Append('[');
-//                 sb.Append(arraySize.ToString());
-//                 sb.Append(']');
-//             }
-
-            return sb.ToString();
-        }
-
         public override string ToString()
         {
-            return m_representation;
+            return toStringRepresentation();
         }
     }
 }
