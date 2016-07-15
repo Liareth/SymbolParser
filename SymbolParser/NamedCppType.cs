@@ -9,13 +9,17 @@
         public NamedCppType(string rawType)
         {
             rawType = SymbolParser.handleTemplatedName(SymbolParser.preprocessTemplate(rawType));
-            m_representation = rawType;
 
-            var typeSplit = rawType.Split(' ');
+            // Discard bitfield data for now.
+            var typeSplit = rawType.Split(':')[0].Trim().Split(' ');
 
-            // We should always have two spaces here -- [0] is type, [1] is name and optionally array size.
-            string unprocessedType = typeSplit[0];
-            string unprocessedName = typeSplit[1];
+            string unprocessedType = "";
+            for (int i = 0; i < typeSplit.Length - 1; ++i)
+            {
+                unprocessedType += typeSplit[i] + " ";
+            }
+
+            string unprocessedName = typeSplit[typeSplit.Length-1];
 
             var arraySplit = unprocessedName.Split('[', ']');
 
@@ -31,6 +35,13 @@
 
             name = unprocessedName;
             type = new CppType(unprocessedType);
+
+            m_representation = type.ToString() + " " + name;
+
+            if (type.isArray)
+            {
+                m_representation += "[" + type.arraySize + "]";
+            }
         }
 
         public override string ToString()

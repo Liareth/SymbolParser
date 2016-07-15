@@ -29,29 +29,36 @@ namespace SymbolParser
     {
         public List<Member> members { get; private set; }
         public string name { get; private set; }
+        public List<string> inheritsFrom { get; private set; }
         public string comment { get; private set; }
 
         public ParsedStruct(List<string> lines)
         {
             members = new List<Member>();
+            inheritsFrom = new List<string>();
 
-            int startingIndex;
+            string line = lines[0];
+            line = SymbolParser.handleTemplatedName(SymbolParser.preprocessTemplate(line));
 
-            if (lines[0].Contains("/*"))
+            if (line.Contains(":"))
             {
-                comment = prepareComment(lines[0]);
-                name = lines[1].Replace("struct ", "");
-                startingIndex = 2;
+                // We inherit from something.
+                string[] split = line.Split(':');
+                line = split[0];
+
+                string[] multipleInheritance = split[1].Split(',');
+
+                foreach (string inh in multipleInheritance)
+                {
+                    inheritsFrom.Add(inh.Replace(" ", ""));
+                }
             }
-            else
-            {
-                name = lines[0].Replace("struct ", "");
-                startingIndex = 1;
-            }
 
-            for (int i = startingIndex; i < lines.Count; ++i)
+            name = line.Replace("struct", "").Trim();
+
+            for (int i = 1; i < lines.Count; ++i)
             {
-                string line = lines[i];
+                line = lines[i];
 
                 if (line.Contains("{") || line.Contains("}"))
                 {
@@ -88,6 +95,11 @@ namespace SymbolParser
             while (original[0] == ' ')
             {
                 original = original.Substring(1);
+            }
+
+            if (original.Contains("**_vptr"))
+            {
+                original = "void* vtable_dummy";
             }
 
             return original;

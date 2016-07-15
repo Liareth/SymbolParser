@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,8 +13,8 @@ namespace SymbolParser
 {
     public class SymbolParser
     {
-        public const string OUT_CLASS_FOLDER_WINDOWS = @"ClassWrappers\Windows";
-        public const string OUT_CLASS_FOLDER_LINUX = @"ClassWrappers\Linux";
+        public const string OUT_CLASS_FOLDER_WINDOWS = @"API\Windows";
+        public const string OUT_CLASS_FOLDER_LINUX = @"API\Linux";
         public const string OUT_FUNCTION_FOLDER = @"Functions";
 
         public readonly string[] blackListedPatterns =
@@ -278,11 +279,48 @@ namespace SymbolParser
 
             for (int i = 0; i < lines.Count; ++i)
             {
+                // First, we're going to do a little preprocessing.
+                // We want to delimit each string based on whitespace, then strip out anything weird.
+                string[] blacklist =
+                {
+                    "__attribute__",
+                    "__cppobj",
+                    "[]"
+                };
+
+                lines[i] = string.Join(" ", lines[i].Split(' ').Where(str => !blacklist.Any(bl => str.Contains(bl)))).Replace("::", "__");
+            }
+
+            for (int i = 0; i < lines.Count; ++i)
+            {
                 string line = lines[i];
 
-                if (line.Contains("struct") && line.Contains(";"))
+                if (!line.Contains("struct"))
                 {
-                    // Forward declaration -- ignore;
+                    // Not something we care about.
+                    continue;
+                }
+
+                if (line.Contains(";"))
+                {
+                    // Forward declaration -- ignore.
+                    continue;
+                }
+
+                if (line.Contains("std__"))
+                {
+                    continue;
+                }
+
+                if (line.Contains("#define"))
+                {
+                    // Macro -- ignore.
+                    continue;
+                }
+
+                if (line.Contains("typedef"))
+                {
+                    // Typedef -- ignore.
                     continue;
                 }
 
@@ -311,6 +349,8 @@ namespace SymbolParser
                 }
             }
 
+            // Hack -- ignore all structs that don't start with C.
+            structs.RemoveAll(st => st.name[0] != 'C');
             return structs;
         }
 
@@ -347,6 +387,43 @@ namespace SymbolParser
 
             classes.AddRange(classesToAdd);
             classes = classes.OrderBy(theClass => theClass.name).ToList();
+
+            foreach (ParsedStruct theStruct in structs)
+            {
+                ParsedClass matchingClass = null;
+
+                foreach (ParsedClass theClass in classes)
+                {
+                    if (theClass.name == theStruct.name)
+                    {
+                        matchingClass = theClass;
+                        break;
+                    }
+                }
+
+                Debug.Assert(matchingClass != null);
+
+                foreach (string inh in theStruct.inheritsFrom)
+                {
+                    ParsedClass inheritsFromClass = null;
+
+                    foreach (ParsedClass theClass in classes)
+                    {
+                        if (theClass.name == inh)
+                        {
+                            inheritsFromClass = theClass;
+                            break;
+                        }
+                    }
+
+                    Debug.Assert(inheritsFromClass != null);
+
+                    if (matchingClass != null)
+                    {
+                        matchingClass.inherits.Add(inheritsFromClass);
+                    }
+                }
+            }
         }
 
         private void handleDependencies(List<ParsedClass> classes)
@@ -355,6 +432,11 @@ namespace SymbolParser
             foreach (ParsedClass theClass in classes)
             {
                 var dependencies = new List<CppType>();
+
+                foreach (ParsedClass inheritsFrom in theClass.inherits)
+                {
+                    dependencies.Add(new CppType(inheritsFrom.name));
+                }
 
                 foreach (ParsedFunction theFunction in theClass.functions)
                 {

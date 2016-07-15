@@ -9,6 +9,7 @@ namespace SymbolParser
         public string name { get; private set; }
         public List<ParsedFunction> functions { get; private set; }
         public List<NamedCppType> data { get; private set; }
+        public List<ParsedClass> inherits { get; private set; }
         public List<ParsedClass> headerDependencies { get; private set; }
         public List<ParsedClass> sourceDependencies { get; private set; }
         public List<CppType> unknownDependencies { get; private set; }
@@ -25,6 +26,7 @@ namespace SymbolParser
             name = className;
             functions = new List<ParsedFunction>();
             data = new List<NamedCppType>();
+            inherits = new List<ParsedClass>();
             headerDependencies = new List<ParsedClass>();
             sourceDependencies = new List<ParsedClass>();
             unknownDependencies = new List<CppType>();
@@ -139,7 +141,21 @@ namespace SymbolParser
 
             var lines = new List<string>();
 
-            lines.Add("class " + name);
+            string className = "class " + name;
+
+            if (inherits.Count != 0)
+            {
+                className += " : ";
+
+                foreach (ParsedClass inheritsFrom in inherits)
+                {
+                    className += "public " + inheritsFrom.name + ", ";
+                }
+
+                className = className.Remove(className.IndexOf(','));
+            }
+
+            lines.Add(className);
             lines.Add("{");
             lines.Add("public:");
 

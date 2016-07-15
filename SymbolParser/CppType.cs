@@ -290,22 +290,26 @@ namespace SymbolParser
         private static BuiltInCppTypes? getBaseType(string type)
         {
             // Strip everything that might mess with this.
-            type = cleanType(type);
+            type = cleanType(type).ToLower();
 
             switch (type)
             {
                 case "__int8":
                 case "int8_t":
+                case "int8":
                     return BuiltInCppTypes.INT8;
                 case "unsigned __int8":
                 case "unsigned^__int8":
                 case "uint8_t":
+                case "uint8":
+                case "byte":
                     return BuiltInCppTypes.UNSIGNED_INT8;
                 case "signed __int8":
                 case "signed^__int8":
                     return BuiltInCppTypes.SIGNED_INT8;
                 case "__int16":
                 case "int16_t":
+                case "int16":
                 case "short":
                 case "short int":
                 case "short^int":
@@ -313,10 +317,12 @@ namespace SymbolParser
                 case "unsigned __int16":
                 case "unsigned^__int16":
                 case "uint16_t":
+                case "uint16":
                 case "unsigned short":
                 case "unsigned short int":
                 case "unsigned^short":
                 case "unsigned^short^int":
+                case "word":
                     return BuiltInCppTypes.UNSIGNED_INT16;
                 case "signed __int16":
                 case "signed^__int16":
@@ -327,6 +333,7 @@ namespace SymbolParser
                     return BuiltInCppTypes.SIGNED_INT16;
                 case "__int32":
                 case "int32_t":
+                case "int32":
                 case "int":
                 case "long":
                 case "long int":
@@ -335,6 +342,7 @@ namespace SymbolParser
                 case "unsigned __int32":
                 case "unsigned^__int32":
                 case "uint32_t":
+                case "uint32":
                 case "unsigned":
                 case "unsigned int":
                 case "unsigned^int":
@@ -342,6 +350,7 @@ namespace SymbolParser
                 case "unsigned long int":
                 case "unsigned^long":
                 case "unsigned^long^int":
+                case "dword":
                     return BuiltInCppTypes.UNSIGNED_INT32;
                 case "signed __int32":
                 case "signed^__int32":
@@ -354,6 +363,7 @@ namespace SymbolParser
                     return BuiltInCppTypes.SIGNED_INT32;
                 case "__int64":
                 case "int64_t":
+                case "int64":
                 case "long long":
                 case "long long int":
                 case "long^long":
@@ -362,6 +372,7 @@ namespace SymbolParser
                 case "unsigned __int64":
                 case "unsigned^__int64":
                 case "uint64_t":
+                case "uint64":
                 case "unsigned long long":
                 case "unsigned long long int":
                 case "unsigned^long^long":
@@ -394,7 +405,6 @@ namespace SymbolParser
                     return BuiltInCppTypes.FLOAT;
             }
 
-            Debug.Assert(false, "Could not construct an enum representation from type " + type);
             return null;
         }
 
@@ -427,12 +437,12 @@ namespace SymbolParser
                 }
             }
 
-            if (isArray)
-            {
-                sb.Append('[');
-                sb.Append(arraySize.ToString());
-                sb.Append(']');
-            }
+//             if (isArray)
+//             {
+//                 sb.Append('[');
+//                 sb.Append(arraySize.ToString());
+//                 sb.Append(']');
+//             }
 
             return sb.ToString();
         }
