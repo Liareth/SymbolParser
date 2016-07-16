@@ -161,7 +161,13 @@ namespace SymbolParser
 
             lines.Add("};");
             lines.Add("");
-            lines.AddRange(functions.SelectMany(fnc => fnc.asClassDeclaration()));
+
+            if (functions.Count != 0)
+            { 
+                lines.AddRange(functions.SelectMany(fnc => fnc.asClassDeclaration()));
+                lines.Add("");
+            }
+
             return lines;
         }
 

@@ -486,25 +486,10 @@ namespace SymbolParser
                 Directory.CreateDirectory(funcDir);
             }
 
-            string functionHeader = CommandLine.args.headerGuardPrefix;
-            string fileName;
-
-            if (CommandLine.args.target == CommandLineArgs.WINDOWS)
-            {
-                functionHeader += "FUNCTIONS_WINDOWS_HPP";
-                fileName = "FunctionsWindows";
-            }
-            else
-            {
-                functionHeader += "FUNCTIONS_LINUX_HPP";
-                fileName = "FunctionsLinux";
-            }
-
+            string fileName = CommandLine.args.target == CommandLineArgs.WINDOWS ? "FunctionsWindows" : "FunctionsLinux";
             var header = new List<string>();
 
-            header.Add("#ifndef " + functionHeader);
-            header.Add("#define " + functionHeader);
-
+            header.Add("#pragma once");
             header.Add("");
             header.Add("#include <cstdint>");
             header.Add("");
@@ -522,8 +507,6 @@ namespace SymbolParser
             header.Add("}");
             header.Add("");
             header.Add("}");
-            header.Add("");
-            header.Add("#endif // " + functionHeader);
 
             File.WriteAllLines(Path.Combine(funcDir, fileName + ".hpp"), header);
         }
@@ -571,9 +554,7 @@ namespace SymbolParser
             {
                 var headerFile = new List<string>();
 
-                string headerGuard = CommandLine.args.headerGuardPrefix + unknownType.type.ToUpper() + "_HPP";
-                headerFile.Add("#ifndef " + headerGuard);
-                headerFile.Add("#define " + headerGuard);
+                headerFile.Add("#pragma once");
                 headerFile.Add("");
                 headerFile.Add("namespace " + CommandLine.args.libNamespace + " {");
                 headerFile.Add("");
@@ -584,8 +565,6 @@ namespace SymbolParser
                 headerFile.Add("}");
                 headerFile.Add("");
                 headerFile.Add("}");
-                headerFile.Add("");
-                headerFile.Add("#endif // " + headerGuard);
 
                 File.WriteAllLines(Path.Combine(classDir, "unknown_" + unknownType.type + ".hpp"), headerFile);
             }
@@ -643,9 +622,7 @@ namespace SymbolParser
 
         private static void buildClassHeader(List<string> header, ParsedClass theClass)
         {
-            string headerGuard = CommandLine.args.headerGuardPrefix + theClass.name.ToUpper() + "_HPP";
-            header.Add("#ifndef " + headerGuard);
-            header.Add("#define " + headerGuard);
+            header.Add("#pragma once");
             header.Add("");
             header.Add("#include <cstdint>");
             header.Add("");
@@ -670,12 +647,9 @@ namespace SymbolParser
             }
 
             header.AddRange(theClass.asClassHeader());
-            header.Add("");
             header.Add("}");
             header.Add("");
             header.Add("}");
-            header.Add("");
-            header.Add("#endif // " + headerGuard);
         }
     }
 }
