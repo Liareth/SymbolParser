@@ -70,6 +70,11 @@ namespace SymbolParser
 
             dumpStandaloneFiles(classes);
             dumpClassFiles(classes);
+
+            if (CommandLine.args.produceUnityBuildFile)
+            {
+                dumpUnityBuildFile(classes);
+            }
         }
 
         public static string preprocessTemplate(string line)
@@ -584,6 +589,34 @@ namespace SymbolParser
 
                 File.WriteAllLines(Path.Combine(classDir, "unknown_" + unknownType.type + ".hpp"), headerFile);
             }
+        }
+
+        private void dumpUnityBuildFile(List<ParsedClass> classes)
+        {
+            string classDir = CommandLine.args.outDir;
+
+            if (CommandLine.args.target == CommandLineArgs.WINDOWS)
+            {
+                classDir = Path.Combine(classDir, OUT_CLASS_FOLDER_WINDOWS);
+            }
+            else
+            {
+                classDir = Path.Combine(classDir, OUT_CLASS_FOLDER_LINUX);
+            }
+
+            if (!Directory.Exists(classDir))
+            {
+                Directory.CreateDirectory(classDir);
+            }
+
+            List<string> source = new List<string>();
+
+            foreach (ParsedClass parsedClass in classes)
+            {
+                source.Add("#include \"" + parsedClass.name + ".cpp\"");
+            }
+
+            File.WriteAllLines(Path.Combine(classDir, "UnityBuild.cpp"), source);
         }
 
         private static void buildClassSource(List<string> body, ParsedClass theClass)
