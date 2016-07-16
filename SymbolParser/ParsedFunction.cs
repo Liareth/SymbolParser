@@ -95,7 +95,7 @@ namespace SymbolParser
             {
                 CppType param = new CppType(SymbolParser.handleTemplatedName(parameter));
 
-                if (param.isPointer || (param.baseType.HasValue && param.baseType.Value != BuiltInCppTypes.VOID))
+                if (!param.isBaseType || param.isPointer || (param.baseType.HasValue && param.baseType.Value != BuiltInCppTypes.VOID))
                 {
                     parameters.Add(param);
                 }
