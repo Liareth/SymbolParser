@@ -8,9 +8,9 @@ namespace SymbolParser
     {
         public NamedCppType data;
 
-        public Member(string line) 
+        public Member(string line, List<ParsedTypedef> typedefs) 
         {
-            data = new NamedCppType(prepareType(line));
+            data = new NamedCppType(prepareType(line), typedefs);
         }
 
         private static string prepareType(string original)
@@ -31,7 +31,7 @@ namespace SymbolParser
             {
                 original = "void** vtable_dummy";
             }
-;
+
             return original;
         }
     };
@@ -43,7 +43,7 @@ namespace SymbolParser
         public List<string> inheritsFrom { get; private set; }
         public ParsedAttributes attributes { get; private set; }
 
-        public ParsedStruct(List<string> lines)
+        public ParsedStruct(List<string> lines, List<ParsedTypedef> typedefs)
         {
             members = new List<Member>();
             inheritsFrom = new List<string>();
@@ -69,14 +69,26 @@ namespace SymbolParser
             }
 
             name = line.Replace("struct", "").Trim();
+            int placeholderCount = 0;
 
             for (int i = 1; i < lines.Count; ++i)
             {
                 line = lines[i];
 
-                if (line.Contains("{") || line.Contains("}"))
+                if (line.Contains('{') || line.Contains('}'))
                 {
                     continue;
+                }
+
+                string[] split = line.Split(' ');
+
+                foreach (string section in split)
+                {
+                    if (section.Contains('(') && !section.Contains("__attribute__"))
+                    {
+                        line = "void** funcPtrPlaceholder__" + placeholderCount.ToString();
+                        ++placeholderCount;
+                    }
                 }
 
                 if (line.Contains("/*"))
@@ -86,7 +98,7 @@ namespace SymbolParser
                     line = i < lines.Count ? lines[i] : "";
                 }
 
-                members.Add(new Member(line));
+                members.Add(new Member(line.TrimStart(), typedefs));
             }
         }
     }

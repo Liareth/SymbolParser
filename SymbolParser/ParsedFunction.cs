@@ -39,7 +39,7 @@ namespace SymbolParser
         public UInt32 address { get; private set; }
         public bool isStatic { get; private set; }
 
-        public ParsedFunction(ParsedLine line, ParsedClass theClass = null)
+        public ParsedFunction(ParsedLine line, ParsedClass theClass, List<ParsedTypedef> typedefs)
         {
             name = SymbolParser.handleTemplatedName(line.functionName);
 
@@ -86,14 +86,14 @@ namespace SymbolParser
 
             if (line.returnType != null)
             {
-                returnType = new CppType(SymbolParser.handleTemplatedName(line.returnType));
+                returnType = new CppType(SymbolParser.handleTemplatedName(line.returnType), typedefs);
             }
 
             parameters = new List<CppType>();
 
             foreach (string parameter in line.parameters.Split(','))
             {
-                CppType param = new CppType(SymbolParser.handleTemplatedName(parameter));
+                CppType param = new CppType(SymbolParser.handleTemplatedName(parameter), typedefs);
 
                 if (!param.isBaseType || param.isPointer || (param.baseType.HasValue && param.baseType.Value != BuiltInCppTypes.VOID))
                 {

@@ -51,7 +51,7 @@ namespace SymbolParser
         public string type { get; private set; }
         public BuiltInCppTypes? baseType { get; private set; }
 
-        public CppType(string rawType)
+        public CppType(string rawType, List<ParsedTypedef> typedefs = null)
         {
             rawType = rawType.Replace("::", "");
 
@@ -97,10 +97,26 @@ namespace SymbolParser
                 isConstPointer = getIsConstPointer(rawType);
 
                 baseType = getBaseType(rawType);
-
                 type = baseType.HasValue
                             ? getType(baseType.Value)
                             : getType(rawType);
+
+                if (typedefs != null)
+                {
+                    ParsedTypedef matchingTypedef = typedefs.FirstOrDefault(td => td.from.type == type);
+
+                    if (matchingTypedef != null)
+                    {
+                        if (matchingTypedef.to.isPointer)
+                        {
+                            isPointer = true;
+                            pointerDepth += matchingTypedef.to.pointerDepth;
+                        }
+
+                        baseType = matchingTypedef.to.baseType;
+                        type = matchingTypedef.to.type;
+                    }
+                }
             }
         }
 

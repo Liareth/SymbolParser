@@ -50,15 +50,16 @@ namespace SymbolParser
 
         public SymbolParser()
         {
-            List<string> clean = cleanFile(CommandLine.args.parse);
-            List<ParsedClass> classes = getClasses(getParsedLines(clean));
-            List<ParsedStruct> structs = getStructs(File.ReadAllLines(CommandLine.args.structs).ToList());
+            List<string> structFile = cleanStructFile(CommandLine.args.structs);
+            List<ParsedTypedef> typedefs = getTypedefs(structFile);
 
+            List<ParsedClass> classes = getClasses(getParsedLines(cleanFile(CommandLine.args.parse)), typedefs);
+            List<ParsedStruct> structs = getStructs(structFile, typedefs);
             addStructsToClasses(structs, classes);
 
             if (CommandLine.args.crossref != null)
             {
-                List<ParsedClass> crossRefClasses = getClasses(getParsedLines(cleanFile(CommandLine.args.crossref)));
+                List<ParsedClass> crossRefClasses = getClasses(getParsedLines(cleanFile(CommandLine.args.crossref)), typedefs);
                 crossReference(classes, crossRefClasses);
             }
 
@@ -175,6 +176,31 @@ namespace SymbolParser
             return cleanRaw(File.ReadAllLines(path).ToList());
         }
 
+        private List<string> cleanStructFile(string path)
+        {
+            List<string> lines = File.ReadAllLines(path).ToList();
+
+            for (int i = 0; i < lines.Count; ++i)
+            {
+                string[] blacklist =
+                {
+                    "__cppobj",
+                    "[]"
+                };
+
+                lines[i] = string.Join(" ", lines[i].Split(' ').Where(str => !blacklist.Any(bl => str.Contains(bl))))
+                    .Replace("::", "__")
+                    .Replace("$", "TLS_");
+
+                while (lines[i].Contains(" *"))
+                {
+                    lines[i] = lines[i].Replace(" *", "* ");
+                }
+            }
+
+            return lines;
+        }
+
         // Provides processing on the provided file to make our life easier.
         private List<string> cleanRaw(List<string> lines)
         {
@@ -207,7 +233,32 @@ namespace SymbolParser
             return lines.AsParallel().AsOrdered().Select(line => new ParsedLine(line)).Where(parsedLine => parsedLine.functionName != null).ToList();
         }
 
-        private List<ParsedClass> getClasses(List<ParsedLine> parsedLines)
+        private List<ParsedTypedef> getTypedefs(List<string> lines)
+        {
+            List<ParsedTypedef> typedefs = new List<ParsedTypedef>();
+
+            for (int i = 0; i < lines.Count; ++i)
+            {
+                string line = lines[i];
+
+                if (!line.Contains("typedef"))
+                {
+                    continue;
+                }
+
+                if (line.Contains("("))
+                {
+                    // Ignore function pointers
+                    continue;
+                }
+
+                typedefs.Add(new ParsedTypedef(line));
+            }
+
+            return typedefs;
+        }
+
+        private List<ParsedClass> getClasses(List<ParsedLine> parsedLines, List<ParsedTypedef> typedefs)
         {
             var parsedClassDict = new Dictionary<string, ParsedClass>();
             var parsedFunctionDict = new Dictionary<ParsedClass, List<ParsedFunction>>();
@@ -229,7 +280,7 @@ namespace SymbolParser
                     parsedFunctionDict[thisClass] = new List<ParsedFunction>();
                 }
 
-                parsedFunctionDict[thisClass].Add(new ParsedFunction(line, thisClass));
+                parsedFunctionDict[thisClass].Add(new ParsedFunction(line, thisClass, typedefs));
             }
 
             List<ParsedClass> parsedClasses = parsedClassDict.Values.OrderBy(theClass => theClass.name).ToList();
@@ -243,22 +294,9 @@ namespace SymbolParser
         }
 
         // Parses structs 
-        private List<ParsedStruct> getStructs(List<string> lines)
+        private List<ParsedStruct> getStructs(List<string> lines, List<ParsedTypedef> typedefs)
         {
             List<ParsedStruct> structs = new List<ParsedStruct>();
-
-            for (int i = 0; i < lines.Count; ++i)
-            {
-                // First, we're going to do a little preprocessing.
-                // We want to delimit each string based on whitespace, then strip out anything weird.
-                string[] blacklist =
-                {
-                    "__cppobj",
-                    "[]"
-                };
-
-                lines[i] = string.Join(" ", lines[i].Split(' ').Where(str => !blacklist.Any(bl => str.Contains(bl)))).Replace("::", "__");
-            }
 
             for (int i = 0; i < lines.Count; ++i)
             {
@@ -310,7 +348,7 @@ namespace SymbolParser
                     }
                 }
 
-                ParsedStruct newStruct = new ParsedStruct(linesInThisStruct);
+                ParsedStruct newStruct = new ParsedStruct(linesInThisStruct, typedefs);
 
                 if (!String.IsNullOrWhiteSpace(newStruct.name))
                 {
@@ -318,13 +356,7 @@ namespace SymbolParser
                 }
             }
 
-            string[] whitelist =
-            {
-                "Vector"
-            };
-
-            // Hack -- ignore all structs that don't start with C.
-            structs.RemoveAll(st => !(whitelist.Any(wht => wht == st.name) || st.name[0] == 'C'));
+            structs.RemoveAll(st => st.name.Contains("SDL") || st.name[0] == '_');
             return structs;
         }
 

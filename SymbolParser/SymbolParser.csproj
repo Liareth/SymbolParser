@@ -91,6 +91,7 @@
     <Compile Include="ParsedFunction.cs" />
     <Compile Include="ParsedLine.cs" />
     <Compile Include="ParsedStruct.cs" />
+    <Compile Include="ParsedTypedef.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SymbolParser.cs" />
   </ItemGroup>
