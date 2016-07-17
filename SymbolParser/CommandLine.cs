@@ -21,6 +21,7 @@ namespace SymbolParser
         public string assertOnSizePath = null;
         public string classListPath = null;
         public bool mergeStructs = true;
+        public bool insertPlatformData = true;
     }
 
     public class CommandLine

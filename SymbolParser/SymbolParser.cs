@@ -68,6 +68,11 @@ namespace SymbolParser
                 merge(classes);
             }
 
+            if (CommandLine.args.insertPlatformData)
+            {
+                insertPlatformData(classes);
+            }
+
             handleDependencies(classes);
 
             dumpStandaloneFiles(classes);
@@ -200,6 +205,29 @@ namespace SymbolParser
                     }
                 }
             }
+        }
+
+        private void insertPlatformData(List<ParsedClass> classes)
+        {
+            // Some platforms have weird data which we don't know the layout of but need to know the size
+            // to properly resolve members.
+            // This is hackery to handle it.
+
+            if (CommandLine.args.target == CommandLineArgs.WINDOWS)
+            {
+
+            }
+            else
+            {
+                ParsedClass pthread_cond_t = new ParsedClass("pthread_cond_t");
+                pthread_cond_t.addData(new List<NamedCppType> { new NamedCppType("char m_placeholder[48];") });
+                classes.Add(pthread_cond_t);
+
+                ParsedClass pthread_mutex_t = new ParsedClass("pthread_mutex_t");
+                pthread_mutex_t.addData(new List<NamedCppType> { new NamedCppType("char m_placeholder[24];") });
+                classes.Add(pthread_mutex_t);
+            }
+
         }
 
         private List<string> cleanFile(string path)

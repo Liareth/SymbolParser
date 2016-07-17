@@ -9,7 +9,7 @@ namespace SymbolParser
         public CppType type { get; private set; }
         public ParsedAttributes attributes { get; private set; }
 
-        public NamedCppType(string rawType, List<ParsedTypedef> typedefs)
+        public NamedCppType(string rawType, List<ParsedTypedef> typedefs = null)
         {
             rawType = SymbolParser.handleTemplatedName(SymbolParser.preprocessTemplate(rawType));
 
