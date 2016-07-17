@@ -38,7 +38,8 @@ namespace SymbolParser
             "exception",
             "type_info",
             "...",
-            "non-virtual thunk"
+            "non-virtual thunk",
+            "std"
         };
 
         public SymbolParser()
