@@ -46,7 +46,9 @@ namespace SymbolParser
 
             name = unprocessedName;
             type = new CppType(unprocessedType);
-            m_representation = type.toStringRepresentation(unprocessedName);
+
+            m_representation = attributes.attributes.Count != 0 ? (attributes.ToString() + " ") : "";
+            m_representation += type.toStringRepresentation(unprocessedName);
         }
 
         public override string ToString()
