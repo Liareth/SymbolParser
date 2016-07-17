@@ -38,14 +38,8 @@ namespace SymbolParser
             "bad_typeid",
             "exception",
             "type_info",
-            "..."
-        };
-
-        public readonly string[] whitelistedFreestandingPatterns =
-        {
-            "Exo",
-            "Admin",
-            "Create"
+            "...",
+            "non-virtual thunk"
         };
 
         public SymbolParser()

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace SymbolParser
 {
@@ -339,8 +341,23 @@ namespace SymbolParser
                 // This allows us to handle special cases, e.g. function pointers.
                 for (int i = 0; i < templatedTypes.Count; ++i)
                 {
-                    string[] elements = templatedTypes[i].Split(',');
-                    // TODO: Templated types
+                    string templatedType = templatedTypes[i];
+
+                    while (templatedType.Contains('(') || templatedType.Contains(')'))
+                    {
+                        int leftBracket = templatedType.IndexOf('(');
+
+                        if (leftBracket != -1)
+                        {
+                            int rightBracket = templatedType.IndexOf(')');
+                            Debug.Assert(rightBracket != -1);
+                            templatedType = templatedType.Remove(leftBracket, (rightBracket - leftBracket) + 1);
+                        }
+                    }
+
+                    className = className.Replace(templatedTypes[i], templatedType);
+
+                    // string[] elements = templatedTypes[i].Split(','); //TODO: Properly handle templated types
                 }
 
                 // Strip any additional namespaces.
