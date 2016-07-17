@@ -318,8 +318,13 @@ namespace SymbolParser
                 }
             }
 
+            string[] whitelist =
+            {
+                "Vector"
+            };
+
             // Hack -- ignore all structs that don't start with C.
-            structs.RemoveAll(st => st.name[0] != 'C');
+            structs.RemoveAll(st => !(whitelist.Any(wht => wht == st.name) || st.name[0] == 'C'));
             return structs;
         }
 
