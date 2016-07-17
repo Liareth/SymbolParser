@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace SymbolParser
+﻿namespace SymbolParser
 {
     public class EntryPoint
     {
