@@ -151,20 +151,20 @@ namespace SymbolParser
             }
 
             className += " " + name;
+            lines.Add(className);
 
             if (inherits.Count != 0)
             {
-                className += " : ";
+                string inheritsLine = "    : ";
 
                 foreach (ParsedClass inheritsFrom in inherits)
                 {
-                    className += "public " + inheritsFrom.name + ", ";
+                    inheritsLine += inheritsFrom.name + ", ";
                 }
 
-                className = className.Remove(className.IndexOf(','));
+                lines.Add(inheritsLine.TrimEnd(new char[] { ',', ' ' }));
             }
 
-            lines.Add(className);
             lines.Add("{");
 
             if (data.Count > 0)
