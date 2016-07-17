@@ -5,10 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-// TASK LIST:
-// 1. Improve platform dependant types (__int32). Add flag to indicate platform dependant, and don't apply these during cross referencing.
-// 2. Perhaps improve the implementation of unknown types.
-
 namespace SymbolParser
 {
     public class SymbolParser
@@ -257,7 +253,6 @@ namespace SymbolParser
                 // We want to delimit each string based on whitespace, then strip out anything weird.
                 string[] blacklist =
                 {
-                    "__attribute__",
                     "__cppobj",
                     "[]"
                 };
@@ -351,11 +346,13 @@ namespace SymbolParser
                 {
                     ParsedClass newParsedClass = new ParsedClass(theStruct.name);
                     newParsedClass.addData(data);
+                    newParsedClass.addAttributes(theStruct.attributes);
                     classesToAdd.Add(newParsedClass);
                 }
                 else
                 {
                     matchingClass.addData(data);
+                    matchingClass.addAttributes(theStruct.attributes);
                 }
             }
 
@@ -593,6 +590,31 @@ namespace SymbolParser
             foreach (ParsedClass parsedClass in classes)
             {
                 source.Add("#include \"" + parsedClass.name + ".cpp\"");
+            }
+
+            SortedDictionary<string, string> knownStructSizes = new SortedDictionary<string, string>();
+
+            if (CommandLine.args.assertOnSizePath != null)
+            {
+                string[] lines = File.ReadAllLines(CommandLine.args.assertOnSizePath);
+
+                foreach (string line in lines)
+                {
+                    string[] lineSplit = line.Split(' ');
+                    Debug.Assert(lineSplit.Length == 2);
+                    knownStructSizes.Add(lineSplit[0].Trim(), lineSplit[1].Trim());
+                }
+            }
+
+            source.Add("");
+            source.Add("template <int size, int desiredSize>");
+            source.Add("struct CheckSize { static_assert(size == desiredSize, \"Struct size mismatch!\"); };");
+            source.Add("");
+
+            foreach (KeyValuePair<string, string> keyValue in knownStructSizes)
+            {
+                string ns = CommandLine.args.libNamespace + "::" + CommandLine.args.classNamespace + "::";
+                source.Add("CheckSize<sizeof(" + ns + keyValue.Key + "), " + keyValue.Value + "> SIZE_CHECK_" + keyValue.Key.ToUpper() + ";");
             }
 
             File.WriteAllLines(Path.Combine(classDir, "UnityBuild.cpp"), source);

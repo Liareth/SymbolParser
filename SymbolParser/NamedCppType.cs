@@ -1,15 +1,21 @@
-﻿namespace SymbolParser
+﻿using System.Linq;
+
+namespace SymbolParser
 {
     public class NamedCppType
     {
         private readonly string m_representation;
         public string name { get; private set; }
         public CppType type { get; private set; }
+        public ParsedAttributes attributes { get; private set; }
 
         public NamedCppType(string rawType)
         {
             rawType = SymbolParser.handleTemplatedName(SymbolParser.preprocessTemplate(rawType));
 
+            attributes = new ParsedAttributes(rawType);
+            rawType = string.Join(" ", rawType.Split(' ').Where(str => !str.Contains("__attribute__")));
+   
             string[] bitFieldSplit = rawType.Split(':');
             string[] typeSplit = bitFieldSplit[0].Trim().Split(' ');
 

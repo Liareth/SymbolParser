@@ -6,6 +6,7 @@ namespace SymbolParser
     public class ParsedClass
     {
         public string name { get; private set; }
+        public ParsedAttributes attributes { get; private set; }
         public List<ParsedFunction> functions { get; private set; }
         public List<NamedCppType> data { get; private set; }
         public List<ParsedClass> inherits { get; private set; }
@@ -104,6 +105,11 @@ namespace SymbolParser
             data.AddRange(newData);
         }
 
+        public void addAttributes(ParsedAttributes newAttributes)
+        {
+            attributes = newAttributes;
+        }
+
         public List<string> asClassSource()
         {
             var lines = new List<string>();
@@ -137,7 +143,14 @@ namespace SymbolParser
 
             var lines = new List<string>();
 
-            string className = "struct " + name;
+            string className = "struct";
+
+            if (attributes != null && attributes.attributes.Count != 0)
+            {
+                className += " " + attributes.ToString();
+            }
+
+            className += " " + name;
 
             if (inherits.Count != 0)
             {
