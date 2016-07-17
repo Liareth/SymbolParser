@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -34,7 +36,7 @@ namespace SymbolParser
         public bool isPointer { get; private set; }
         public uint pointerDepth { get; private set; }
         public bool isArray { get; private set; }
-        public uint arraySize { get; private set; }
+        public List<uint> arraySize { get; private set; }
         public bool isReference { get; private set; }
         public bool isConst { get; private set; }
         public bool isConstPointer { get; private set; }
@@ -62,7 +64,6 @@ namespace SymbolParser
                 isPointer = true;
                 pointerDepth = 1;
                 isArray = false;
-                arraySize = 0;
                 isConst = false;
                 isConstPointer = false;
                 isReference = false;
@@ -140,9 +141,12 @@ namespace SymbolParser
 
             if (isArray)
             {
-                sb.Append('[');
-                sb.Append(arraySize.ToString());
-                sb.Append(']');
+                foreach (uint arrDepth in arraySize)
+                {
+                    sb.Append('[');
+                    sb.Append(arrDepth.ToString());
+                    sb.Append(']');
+                }
             }
 
             if (isBitfield)
@@ -222,9 +226,18 @@ namespace SymbolParser
             return type.Split('[', ']').Length > 1;
         }
 
-        private static uint getArraySize(string type)
+        private static List<uint> getArraySize(string type)
         {
-            return uint.Parse(type.Split('[', ']')[1]);
+            List<uint> arraySizes = new List<uint>();
+
+            string[] split = type.Split(new char[] { '[', ']' }, StringSplitOptions.RemoveEmptyEntries);
+
+            for (int i = 1; i < split.Length; ++i)
+            {
+                arraySizes.Add(uint.Parse(split[i]));
+            }
+
+            return arraySizes;
         }
 
         private static bool getIsBitfield(string type)
