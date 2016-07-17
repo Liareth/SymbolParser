@@ -63,6 +63,11 @@ namespace SymbolParser
                 crossReference(classes, crossRefClasses);
             }
 
+            if (CommandLine.args.mergeStructs)
+            {
+                merge(classes);
+            }
+
             handleDependencies(classes);
 
             dumpStandaloneFiles(classes);
@@ -72,6 +77,8 @@ namespace SymbolParser
             {
                 dumpUnityBuildFile(classes);
             }
+
+            dumpClassList(classes);
         }
 
         public static string preprocessTemplate(string line)
@@ -166,6 +173,30 @@ namespace SymbolParser
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        private void merge(List<ParsedClass> classes)
+        {
+            // IDA does some -weird- stuff.
+            // So you'll get output like this:
+            //   - CVirtualMachine (size 4)
+            //   - CVirtualMachine_0 (size 996)
+            // So in this code, we merge all the data from the _0 instances into the main instance.
+            foreach (ParsedClass theClass in classes)
+            {
+                string name = theClass.name;
+
+                if (name.EndsWith("_0"))
+                {
+                    ParsedClass owner = classes.FirstOrDefault(cl => cl.name == name.Replace("_0", ""));
+
+                    if (owner != null)
+                    {
+                        owner.data.Clear();
+                        owner.data.AddRange(theClass.data);
                     }
                 }
             }
@@ -660,6 +691,21 @@ namespace SymbolParser
             }
 
             File.WriteAllLines(Path.Combine(classDir, "UnityBuild.cpp"), source);
+        }
+
+        private void dumpClassList(List<ParsedClass> classes)
+        {
+            if (CommandLine.args.classListPath != null)
+            {
+                List<string> lines = new List<string>();
+                foreach (ParsedClass theClass in classes
+                    .Where(cl => cl.functions.Count != 0 || cl.name.StartsWith("TLK"))
+                    .Where(cl => !cl.name.Contains("Templated") && cl.name != "CDUtil" /* 0 size */ ))
+                {
+                    lines.Add(theClass.name);
+                }
+                File.WriteAllLines(CommandLine.args.classListPath, lines);
+            }
         }
 
         private static void buildClassSource(List<string> body, ParsedClass theClass)

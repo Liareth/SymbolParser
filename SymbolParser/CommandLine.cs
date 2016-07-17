@@ -19,6 +19,8 @@ namespace SymbolParser
         public string target = LINUX;
         public bool produceUnityBuildFile = true;
         public string assertOnSizePath = null;
+        public string classListPath = null;
+        public bool mergeStructs = true;
     }
 
     public class CommandLine
