@@ -340,7 +340,7 @@ namespace SymbolParser
                 for (int i = 0; i < templatedTypes.Count; ++i)
                 {
                     string[] elements = templatedTypes[i].Split(',');
-
+                    // TODO: Templated types
                 }
 
                 // Strip any additional namespaces.
@@ -393,6 +393,12 @@ namespace SymbolParser
 
             // It doesn't matter if there's nothing in the parens -- as long as they are there.
             parameters = funcNameSearchString.Substring(leftParenIndex + 1, rightParenIndex - leftParenIndex - 1);
+
+            if (string.IsNullOrEmpty(parameters))
+            {
+                parameters = "void";
+            }
+
             lookupTable[Components.PARAMETERS_COMPONENT].first = ComponentStatus.FOUND;
             lookupTable[Components.PARAMETERS_COMPONENT].second = currentIndex;
 
