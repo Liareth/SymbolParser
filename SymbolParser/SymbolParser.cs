@@ -605,6 +605,11 @@ namespace SymbolParser
 
                 foreach (string line in lines)
                 {
+                    if (line.Length >= 2 && line[0] == '/' && line[1] == '/')
+                    {
+                        continue;
+                    }
+
                     string[] lineSplit = line.Split(' ');
                     Debug.Assert(lineSplit.Length == 2);
                     knownStructSizes.Add(lineSplit[0].Trim(), lineSplit[1].Trim());
