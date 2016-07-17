@@ -387,10 +387,6 @@ namespace SymbolParser
 
         private static BuiltInCppTypes? getBaseType(string type)
         {
-            // Little hack ... things that are BOOL from IDA are actually 4 bytes.
-            // This fucks with GCC which uses 1-byte bools.
-            type = type.Replace("BOOL", "uint32_t");
-
             // Strip everything that might mess with this.
             type = cleanType(type).ToLower();
 

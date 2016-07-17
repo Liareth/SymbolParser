@@ -27,11 +27,6 @@ namespace SymbolParser
                 original = original.Substring(1);
             }
 
-            if (original.Contains("**_vptr"))
-            {
-                original = "void** vtable_dummy";
-            }
-
             return original;
         }
     };
@@ -84,18 +79,17 @@ namespace SymbolParser
 
                 foreach (string section in split)
                 {
-                    if (section.Contains('(') && !section.Contains("__attribute__"))
+                    if (section.Contains("**_vptr"))
                     {
-                        line = "void** funcPtrPlaceholder__" + placeholderCount.ToString();
-                        ++placeholderCount;
+                        line = "void** m_vtable";
+                        break;
                     }
-                }
-
-                if (line.Contains("/*"))
-                {
-                    // This is a comment -- skip to next line;
-                    ++i;
-                    line = i < lines.Count ? lines[i] : "";
+                    else if (section.Contains('(') && !section.Contains("__attribute__"))
+                    {
+                        line = "void** m_funcPtrPlaceholder__" + placeholderCount.ToString();
+                        ++placeholderCount;
+                        break;
+                    }
                 }
 
                 members.Add(new Member(line.TrimStart(), typedefs));
